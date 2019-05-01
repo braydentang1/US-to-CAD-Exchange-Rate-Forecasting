@@ -109,6 +109,7 @@ evaluate.baggedTheta = function(n, data){
   for(i in 1:length(test)){
     
     train = window(data, end = 2017 + (10+i)/12)
+    set.seed(200350623)
     bootstrap.train = bld.mbb.bootstrap(x = train, num = n)
     
     prediction = mean(unlist(lapply(bootstrap.train, FUN = forecast.BaggedTheta)))
