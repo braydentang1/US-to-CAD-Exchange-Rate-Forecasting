@@ -5,8 +5,8 @@ This project is basically what my friend (Riley Peters) and I did in our term pr
 
 1) Forecasting and forecasting performance over general time series analysis,
 2) Utilizing cross validation in a time series context in which models are dynamically refit per each slice of time.
-3) Shorter term forecasts; the term project we did prioritized 12 month ahead forecasts which were unlikely to be accurate given how long the time frame is.
+3) Shorter term forecasts; the term project we did prioritized 12 month ahead forecasts which were unlikely to be accurate given how long the time frame is (if it was, we would we rich!).
 
-During the project, we were heavily restricted due to space constraints and also because we did not learn about many of the methods that are commonplace in modern forecasting today; methods like the TBATS or the theta method for instance. 
+During the project, we were heavily restricted due to space constraints and also because we did not learn about many of the methods that are commonplace in modern forecasting today; methods like the TBATS or the theta method for instance. This is probably because the course we took was a course rooted in carefully analyzing time series and not necessarily forecasting performance.
 
 Ultimately, I also just want to brush up on my time series skills in R as well. 
