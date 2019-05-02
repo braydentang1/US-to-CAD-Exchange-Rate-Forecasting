@@ -129,7 +129,7 @@ evaluate.baggedTheta = function(n, data, timeSlices){
     set.seed(200350623)
     bootstrap.train = bld.mbb.bootstrap(x = train, num = n)
     
-    predictions = lapply(bootstrap.train, FUN = forecast.BaggedTheta)
+    predictions = lapply(bootstrap.train, FUN = forecast.BaggedTheta, h = length(test))
     model.Average.Process = predictions %>% reduce(ts.intersect) %>% rowMeans(.)
     error[i] = accuracy(model.Average.Process, x = test)[2]
     
@@ -140,9 +140,9 @@ evaluate.baggedTheta = function(n, data, timeSlices){
 }
 
 #Not used because it leads to a worse model.
-forecast.BaggedTheta = function(x){
+forecast.BaggedTheta = function(x, h){
   
-  forecast.theta = thetaf(y = x, h = 2)$mean
+  forecast.theta = thetaf(y = x, h = h)$mean
 
 }
 
