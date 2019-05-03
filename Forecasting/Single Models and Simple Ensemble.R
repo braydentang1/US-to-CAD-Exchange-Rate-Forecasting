@@ -3,7 +3,7 @@ library(forecast)
 library(caret)
 
 #Best single method:
-
+#RWD: 0.02133881 
 #...........................................Import Data.....................................................................#
 
 data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv")
@@ -164,7 +164,7 @@ forecast.BaggedTheta = function(x, h){
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 565, horizon = 3, fixedWindow = FALSE)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 560, horizon = 3, fixedWindow = FALSE)
 
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
 results = evaluate.Models(data = data.ts, exclude = c("Arima","Bagged ETS"), timeSlices = timeSlices)

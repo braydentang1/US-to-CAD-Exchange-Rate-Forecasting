@@ -1,7 +1,10 @@
 library(tidyverse)
 library(forecast)
 library(caret)
+library(parallel)
 
+#0.02144643 RMSE
+#Worse than best single method RWD.
 #......................Import Data..........................................#
 
 data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv")
@@ -20,7 +23,7 @@ innerTrain = function(trainFoldIndex, data, iterations){
   outerTrain.time = time(data)[trainFoldIndex]
   outerTrain = window(data, start = outerTrain.time[1], end = outerTrain.time[length(outerTrain.time)])
   
-  allInnerSets = createTimeSlices(y = outerTrain, initialWindow = 558, horizon = 3, fixedWindow = FALSE)
+  allInnerSets = createTimeSlices(y = outerTrain, initialWindow = 550, horizon = 3, fixedWindow = FALSE)
   allInnerTrain = allInnerSets$train
   allValidation = allInnerSets$test
   
@@ -111,7 +114,23 @@ randomGridSearch = function(grid, predictions, validation){
   
 }
 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 565, horizon = 3, fixedWindow = FALSE)
-bestParameters = lapply(timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 3)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 560, horizon = 3, fixedWindow = FALSE)
+
+#Run in parallel
+cluster = makeCluster(detectCores())
+setDefaultCluster(cluster)
+
+#Load packages on each cluster
+clusterEvalQ(cluster, c(library(caret), library(forecast), library(tidyverse),
+             source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/grabPredictions.R"),
+             source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/innerTrain.R"),
+             source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/outerFold.R"),
+             source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/randomGridSearch.R")))
+
+bestParameters = parLapply(NULL, timeSlices$train, fun = innerTrain, data = data.ts, iterations = 90)
+stopCluster(cluster)
+
+#bestParameters = lapply(timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 75)
+
 finalResults = mapply(FUN = outerFold, trainFoldsIndex = timeSlices$train, testFoldsIndex = timeSlices$test, parameters = bestParameters, MoreArgs = list(data = data.ts), SIMPLIFY = FALSE)
 mean(unlist(finalResults))
