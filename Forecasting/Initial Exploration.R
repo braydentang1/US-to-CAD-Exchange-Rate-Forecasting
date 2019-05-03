@@ -2,19 +2,19 @@ library(tidyverse)
 library(forecast)
 library(caret)
 
-#Will rename once we settle on some sort of methodology
+#Best single method:
 
-#......................Import Data..........................................#
+#...........................................Import Data.....................................................................#
 
 data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv")
 data.ts = ts(data$EXCAUS, frequency = 12, start = c(1971,1), end = c(2019,4)) 
 
-#......................Plot the Time Series.................................#
+#.......................................Plot the Time Series................................................................................#
 
 autoplot(data.ts, ts.colour = "black", ts.size = 1) + labs(title = "US/CAD Exchange Rate Over Time", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD", x = "Time")
 autoplot(diff(data.ts), ts.colour = "black", ts.size = 1) +labs(title = "US/CAD Exchange Rate Over Time; 1st Order Differenced Series", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD; Difference", x = "Time")
 
-#......................Monthly Predictions.............................#
+#......................Evaluation of Various Methods......................................................................#
 #Function that finds monthly RMSE one step ahead in time, with restimation of the model at every step.
 #This is leave one out cross validation.
 #Exclude bagged ETS by default since it takes a long time to run.
@@ -37,7 +37,7 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices){
 
   for(i in 1:length(allTest)){
   
-    model.Average = vector("list", 4)
+    model.Average = vector("list", 5)
     
     train.time = time(data)[allTrain[[i]]]
     test.time = time(data)[allTest[[i]]]
@@ -57,44 +57,57 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices){
     
     #Auto.Arima
     if(!"Arima" %in% exclude){
+      
     arima.model = auto.arima(train, stepwise = TRUE, ic = "aicc", stationary = TRUE)
     forecast.arima = forecast(arima.model, h = length(test))
     error.Arima[i] = accuracy(forecast.arima, x = test)[2,2]
+    
     }
     
     #Theta
     if(!"Theta" %in% exclude){
+      
     forecast.theta = thetaf(y = train, h = length(test))
     model.Average[[2]] = forecast.theta$mean
     error.theta[i] = accuracy(forecast.theta, x = test)[2,2]
+    
     }
     
     #Naive = Random Walk 
     if(!"RWD" %in% exclude){
+      
     forecast.rwd = rwf(y = train, h = length(test), drift = TRUE)
     model.Average[[3]] = forecast.rwd$mean
     error.rwd[i] = accuracy(forecast.rwd, x = test)[2,2]
+    
     }
     
     #TBATS/BATS
     if(!"TBATS" %in% exclude){
+      
       model.tbats = tbats(y = train, num.cores = 4)
       forecast.tbats = forecast(model.tbats, h=length(test))
       model.Average[[4]] = forecast.tbats$mean
       error.tbats[i] = accuracy(forecast.tbats, x = test)[2,2]
+      
     }
     
     #Bagged ETS
     if(!"Bagged ETS" %in% exclude){
+      
       model.baggedETS = baggedETS(y = train)
       forecast.baggedETS = forecast(model.baggedETS, h=length(test))
       error.baggedETS[i] = accuracy(forecast.baggedETS, x = test)[2,2]
+      
     }
     
     #STL
     if(!"STL" %in% exclude){
+      
       forecast.STL = stlf(y = train, h = length(test), robust = TRUE)
+      model.Average[[5]] = forecast.STL$mean
       error.STL[i] = accuracy(forecast.STL, x = test)[2,2]
+      
     }
     
     #Process the ensemble, take a simple average for now
@@ -111,7 +124,10 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices){
   
 }
 
+#......................Custom Bagging Function for the Theta Method...................................................#
 #Not used because it leads to a worse model.
+#Probably could have used a premade function already in the forecast package.
+
 evaluate.baggedTheta = function(n, data, timeSlices){
   
   allTrain = timeSlices$train
@@ -139,6 +155,7 @@ evaluate.baggedTheta = function(n, data, timeSlices){
   
 }
 
+#..................................Wrapper to make calls to forecasting function easier when all of the bootstrapped time series are in a list..............# 
 #Not used because it leads to a worse model.
 forecast.BaggedTheta = function(x, h){
   
@@ -146,9 +163,11 @@ forecast.BaggedTheta = function(x, h){
 
 }
 
+#.............................Create the cross validation time slices.......................................................................# 
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 565, horizon = 3, fixedWindow = FALSE)
 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 560, horizon = 2, fixedWindow = FALSE)
-results = evaluate.Models(data = data.ts, exclude = c("Arima", "Bagged ETS"), timeSlices = timeSlices)
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
+results = evaluate.Models(data = data.ts, exclude = c("Arima","Bagged ETS"), timeSlices = timeSlices)
+
 #Tried using this but model is much worse. Don't use.
 #results.BaggedTheta = evaluate.baggedTheta(n = 5000, data = data.ts)
