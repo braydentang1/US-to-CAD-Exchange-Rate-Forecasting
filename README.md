@@ -1,7 +1,7 @@
 # US-to-CAD-Exchange-Rate-Forecasting
 An attempt to forecast the US to CAD Exchange Rate- Inspired by a school project
 
-Currently, the best method based off average RMSE for a three month period (quarterly forecasts) using 18 test folds is a random walk with drift which sits at around 0.02133 (i.e. off on average a unit of 2.1 cents). The ensemble method of five methods combined as a weighted average (with weights found via. random search) is 0.02145 which is a bit worse than one of the most simplest forecasting methods available (the random walk with drift). This is not too surprising considering how volatile the exchange rate is.
+Currently, the best method based off RMSE for a three month period (quarterly forecasts) using 18 test folds is a random walk with drift which sits at around 0.02133 (i.e. off on average a unit of 2.1 cents). The ensemble method of five methods combined as a weighted average (with weights found via. random search) is 0.02145 which is a bit worse than one of the most simplest forecasting methods available (the random walk with drift). This is not too surprising considering how volatile the exchange rate is.
 
 This project is basically what my friend (Riley Peters) and I did in our term project at the University of Regina, however, with a much greater emphasis on:
 
