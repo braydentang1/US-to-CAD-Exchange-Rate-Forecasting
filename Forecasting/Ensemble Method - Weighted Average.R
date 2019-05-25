@@ -127,7 +127,7 @@ clusterEvalQ(cluster, c(library(caret), library(forecast), library(tidyverse),
              source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/outerFold.R"),
              source("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Main Functions/randomGridSearch.R")))
 
-bestParameters = parLapply(NULL, timeSlices$train, fun = innerTrain, data = data.ts, iterations = 100)
+bestParameters = parLapply(NULL, timeSlices$train, fun = innerTrain, data = data.ts, iterations = 90)
 stopCluster(cluster)
 
 #bestParameters = lapply(timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 75)
