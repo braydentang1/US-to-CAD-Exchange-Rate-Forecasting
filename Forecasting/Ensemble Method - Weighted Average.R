@@ -2,13 +2,18 @@ library(tidyverse)
 library(forecast)
 library(caret)
 library(parallel)
+library(alfred)
 
 #0.02144643 RMSE
 #Worse than best single method RWD.
 #......................Import Data..........................................#
 
-data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv")
-data.ts = ts(data$EXCAUS, frequency = 12, start = c(1971,1), end = c(2019,4)) 
+data = get_fred_series("EXCAUS", "EXCAUS") %>%
+  filter(!is.na(EXCAUS)) %>%
+  rename(DATE = date) 
+
+data.ts = ts(data$EXCAUS, frequency = 12, start = c(year(data$DATE[1]), month(data$DATE[1])), end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
+  window(., start = c(2000,1))
 
 #......................Fit the ensemble model...............................#
 

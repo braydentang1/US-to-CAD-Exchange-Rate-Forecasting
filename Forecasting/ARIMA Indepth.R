@@ -2,17 +2,18 @@ library(tidyverse)
 library(forecast)
 library(caret)
 library(lubridate)
+library(alfred)
 
 #Best single method:
 #RWD: 0.02133881 
 #...........................................Import Data.....................................................................#
 
-data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv") %>% 
-  mutate(DATE = as.Date(DATE)) %>%
-  .[349:nrow(.), ]
+data = get_fred_series("EXCAUS", "EXCAUS") %>%
+  filter(!is.na(EXCAUS)) %>%
+  rename(DATE = date) 
 
-data.ts = ts(data$EXCAUS, frequency = 12, start = c(2000,1), end = c(2019,4))
-
+data.ts = ts(data$EXCAUS, frequency = 12, start = c(year(data$DATE[1]), month(data$DATE[1])), end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
+           window(., start = c(2000,1))
 #..........................................Feature Engineering..............................................................#
 
 data.FE = data %>% 
@@ -21,11 +22,12 @@ data.FE = data %>%
   mutate(TwoThousandTen.LevelChange = ifelse(year(DATE) >= 2008, 1,0)) %>%
   mutate(HOLIDAYS = ifelse(month(DATE) == 11 | month(DATE) == 12, 1,0)) %>%
   mutate(TwoThousandTwo.LevelChange = ifelse(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1,0)) %>%
-  select(-DATE, -EXCAUS) %>%
-  data.matrix(.)
+  filter(DATE >= ymd("2000-1-01")) %>%
+  select(-EXCAUS, -DATE) %>%
+  data.matrix(.) 
 #.......................................Plot the Time Series................................................................................#
 
-autoplot(data.ts, ts.colour = "black", ts.size = 1) + labs(title = "US/CAD Exchange Rate Over Time", subtitle = "Over The Period of January 2000 to April 2019", y = "$1 USD in CAD", x = "Time")
+autoplot(data.ts, ts.colour = "black", ts.size = 1) + labs(title = "US/CAD Exchange Rate Over Time", subtitle = "Over The Period of January 2000 to Today", y = "$1 USD in CAD", x = "Time")
 autoplot(diff(data.ts), ts.colour = "black", ts.size = 1) +labs(title = "US/CAD Exchange Rate Over Time; 1st Order Differenced Series", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD; Difference", x = "Time")
 
 #......................Evaluation of Various Methods......................................................................#
@@ -72,10 +74,13 @@ evaluate.Arima = function(data, timeSlices, xreg){
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 202, horizon = 3, fixedWindow = FALSE)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fixedWindow = FALSE)
 
-#I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
 results = evaluate.Arima(data = data.ts, timeSlices = timeSlices, xreg = data.FE)
 
-#Tried using this but model is much worse. Don't use.
-#results.BaggedTheta = evaluate.baggedTheta(n = 5000, data = data.ts)
+xreg.pred = tibble(GreatRecession.Ind = rep(0, 3), DotCom_Recession.Ind = rep(0,3), TwoThousandTen.LevelChange = rep(1,3), HOLIDAYS =  rep(0,3),
+                  TwoThousandTwo.LevelChange = rep(0,3))
+
+arima.final = auto.arima(data.ts, stepwise = TRUE, ic = "aicc", stationary = TRUE, xreg = data.FE)
+predictions.final = forecast(arima.final, h = 3, xreg = as.matrix(xreg.pred))
+

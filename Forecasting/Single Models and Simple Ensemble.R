@@ -1,14 +1,31 @@
 library(tidyverse)
 library(forecast)
 library(caret)
+library(lubridate)
+library(alfred)
 
 #Best single method:
 #RWD: 0.02133881 
 #...........................................Import Data.....................................................................#
 
-data = read_csv("C:/Users/Brayden/Documents/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Data/EXCAUS.csv")
-data.ts = ts(data$EXCAUS, frequency = 12, start = c(1971,1), end = c(2019,4)) 
+data = get_fred_series("EXCAUS", "EXCAUS") %>%
+  filter(!is.na(EXCAUS)) %>%
+  rename(DATE = date) 
 
+data.ts = ts(data$EXCAUS, frequency = 12, start = c(year(data$DATE[1]), month(data$DATE[1])), end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
+  window(., start = c(2000,1))
+
+#..........................................Feature Engineering..............................................................#
+
+data.FE = data %>% 
+  mutate(GreatRecession.Ind = ifelse(DATE >= ymd("2007-12-01") & DATE <= ymd("2009-06-01"),1,0)) %>%
+  mutate(DotCom_Recession.Ind = ifelse(DATE >= ymd("2001-03-01") & DATE <= ymd("2001-11-01"), 1,0)) %>%
+  mutate(TwoThousandTen.LevelChange = ifelse(year(DATE) >= 2008, 1,0)) %>%
+  mutate(HOLIDAYS = ifelse(month(DATE) == 11 | month(DATE) == 12, 1,0)) %>%
+  mutate(TwoThousandTwo.LevelChange = ifelse(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1,0)) %>%
+  filter(DATE >= ymd("2000-1-01")) %>%
+  select(-EXCAUS, -DATE) %>%
+  data.matrix(.) 
 #.......................................Plot the Time Series................................................................................#
 
 autoplot(data.ts, ts.colour = "black", ts.size = 1) + labs(title = "US/CAD Exchange Rate Over Time", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD", x = "Time")
@@ -20,7 +37,7 @@ autoplot(diff(data.ts), ts.colour = "black", ts.size = 1) +labs(title = "US/CAD 
 #Exclude bagged ETS by default since it takes a long time to run.
 #Exclude is a character vector that will exclude the fitted models in the vector. Example: c("ETS", "Arima") excludes ETS and Arima from the results.
 
-evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices){
+evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices, xreg){
   
   allTrain = timeSlices$train
   allTest = timeSlices$test
@@ -58,8 +75,17 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices){
     #Auto.Arima
     if(!"Arima" %in% exclude){
       
-    arima.model = auto.arima(train, stepwise = TRUE, ic = "aicc", stationary = TRUE)
-    forecast.arima = forecast(arima.model, h = length(test))
+    train.time = time(data)[allTrain[[i]]]
+    test.time = time(data)[allTest[[i]]]
+      
+    train = window(data, start = train.time[1], end = train.time[length(train.time)])
+    test = window(data, start = test.time[1], end = test.time[length(test.time)])
+      
+    xreg.train = xreg[1:length(train),]
+    xreg.test = xreg[1:length(test),]  
+      
+    arima.model = auto.arima(train, stepwise = TRUE, ic = "aicc", stationary = TRUE, xreg = xreg.train)
+    forecast.arima = forecast(arima.model, h = length(test), xreg = xreg.test)
     error.Arima[i] = accuracy(forecast.arima, x = test)[2,2]
     
     }
@@ -164,10 +190,10 @@ forecast.BaggedTheta = function(x, h){
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 560, horizon = 3, fixedWindow = FALSE)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fixedWindow = FALSE)
 
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
-results = evaluate.Models(data = data.ts, exclude = c("Arima","Bagged ETS"), timeSlices = timeSlices)
+results = evaluate.Models(data = data.ts, exclude = c("Bagged ETS", "ETS", "Theta", "STL"), timeSlices = timeSlices, xreg = data.FE)
 
 #Tried using this but model is much worse. Don't use.
 #results.BaggedTheta = evaluate.baggedTheta(n = 5000, data = data.ts)
