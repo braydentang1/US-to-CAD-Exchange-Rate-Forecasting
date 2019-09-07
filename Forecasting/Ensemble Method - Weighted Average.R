@@ -8,7 +8,7 @@ library(parallel)
 
 source("/home/brayden/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Forecasting/allFunctions.R")
 
-#0.02144643 RMSE
+#0.02384 RMSE
 #Worse than best single method RWD.
 #......................Import Data..........................................#
 
@@ -35,7 +35,7 @@ data.FE = data %>%
 
 timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fixedWindow = FALSE)
 
-bestParameters = mclapply(X = timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 90, xreg = data.FE, mc.cores = 4)
+bestParameters = mclapply(X = timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 100, xreg = data.FE, mc.cores = 4)
 
 #bestParameters = lapply(timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 75)
 

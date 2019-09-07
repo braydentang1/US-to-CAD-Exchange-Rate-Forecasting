@@ -5,7 +5,7 @@ library(lubridate)
 library(alfred)
 
 #Best single method:
-#RWD: 0.02133881 
+#RWD: 0.02362
 #...........................................Import Data.....................................................................#
 
 data = get_fred_series("EXCAUS", "EXCAUS") %>%
