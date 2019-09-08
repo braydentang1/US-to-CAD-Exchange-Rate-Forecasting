@@ -1,11 +1,12 @@
 library(tidyverse)
 library(forecast)
 library(caret)
+library(smooth)
 library(lubridate)
 library(alfred)
 
 #Best single method:
-#RWD: 0.02362
+#RWD: 0.02575
 #...........................................Import Data.....................................................................#
 
 data = get_fred_series("EXCAUS", "EXCAUS") %>%
@@ -49,7 +50,7 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices, xreg){
   error.tbats = vector("numeric", length(allTest))
   error.baggedETS = vector("numeric", length(allTest))
   error.STL = vector("numeric", length(allTest))
-  
+  error.CES = vector("numeric", length(allTest))
   error.Ensemble = vector("numeric", length(allTest))
 
   for(i in 1:length(allTest)){
@@ -136,6 +137,15 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices, xreg){
       
     }
     
+    #CES
+    if(!"CES" %in% exclude){
+      
+      forecast.CES = auto.ces(y = train, h = length(test))
+      model.Average[[6]] = forecast.CES$forecast
+      error.CES[i] = accuracy(x = test, f = forecast.CES$forecast)[2]
+      
+    }
+    
     #Process the ensemble, take a simple average for now
     model.Average.Process = model.Average %>% reduce(ts.intersect) %>% rowMeans(.)
     
@@ -146,7 +156,8 @@ evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices, xreg){
   list(ETS = mean(error.ETS, na.rm = TRUE), Auto.Arima = mean(error.Arima, na.rm = TRUE), 
        Theta = mean(error.theta, na.rm = TRUE), RWD = mean(error.rwd, na.rm = TRUE),
        TBATS = mean(error.tbats, na.rm = TRUE), baggedETS = mean(error.baggedETS, na.rm = TRUE),
-       STL = mean(error.STL, na.rm = TRUE), Ensemble = mean(error.Ensemble, na.rm = TRUE))
+       STL = mean(error.STL, na.rm = TRUE), CES = mean(error.CES, na.rm = TRUE),
+       Ensemble = mean(error.Ensemble, na.rm = TRUE))
   
 }
 
@@ -190,7 +201,7 @@ forecast.BaggedTheta = function(x, h){
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fixedWindow = FALSE)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 200, horizon = 3, fixedWindow = FALSE)
 
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
 results = evaluate.Models(data = data.ts, exclude = c("Bagged ETS", "ETS", "Theta", "STL"), timeSlices = timeSlices, xreg = data.FE)

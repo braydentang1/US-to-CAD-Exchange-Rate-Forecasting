@@ -3,13 +3,14 @@ library(forecast)
 library(caret)
 library(parallel)
 library(lubridate)
+library(smooth)
 library(alfred)
 library(parallel)
 
 source("/home/brayden/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Forecasting/allFunctions.R")
 
-#0.02384 RMSE
-#Worse than best single method RWD.
+#0.02558 RMSE
+#Slightly better than the RWD
 #......................Import Data..........................................#
 
 data = get_fred_series("EXCAUS", "EXCAUS") %>%
@@ -33,7 +34,7 @@ data.FE = data %>%
 
 #..........................................Fit model.........................................................................#
 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fixedWindow = FALSE)
+timeSlices = createTimeSlices(y = data.ts, initialWindow = 200, horizon = 3, fixedWindow = FALSE)
 
 bestParameters = mclapply(X = timeSlices$train, FUN = innerTrain, data = data.ts, iterations = 100, xreg = data.FE, mc.cores = 4)
 
@@ -41,3 +42,14 @@ bestParameters = mclapply(X = timeSlices$train, FUN = innerTrain, data = data.ts
 
 finalResults = mapply(FUN = outerFold, trainFoldsIndex = timeSlices$train, testFoldsIndex = timeSlices$test, parameters = bestParameters, MoreArgs = list(data = data.ts, xreg = data.FE), SIMPLIFY = FALSE)
 mean(unlist(finalResults))
+
+#.........................................Forecast three months ahead.......................................................#
+
+#Find the final parameters using all the data
+bestParam.final = innerTrain(trainFoldIndex = 1:length(data.ts), data = data.ts, iterations = 100, xreg = data.FE)
+#Fit the final model
+
+xreg.newdata = tibble(GreatRecession.Ind = c(0,0,0), DotCom_Recession.Ind = c(0,0,0), TwoThousandTen.LevelChange = c(1,1,1),
+                                HOLIDAYS = c(0,0,0), TwoThousandTwo.LevelChange = c(0,0,0)) 
+finalModel  = forecast.ensemble(train = data.ts, horizon = 3, parameters = bestParam.final, xreg.train = data.FE, xreg.newdata = as.matrix(xreg.newdata))
+
