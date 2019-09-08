@@ -127,7 +127,7 @@ forecast.ensemble = function(train, horizon, parameters, xreg.train, xreg.newdat
                                                 TBATS * as.numeric(parameters[1, 2]/parameters[1, constant]) +
                                                 ARIMA * as.numeric(parameters[1, 3]/parameters[1, constant]) +
                                                 CES * as.numeric(parameters[1, 4]/parameters[1, constant]))
-  predictions.tmp
+  
 
 }
 

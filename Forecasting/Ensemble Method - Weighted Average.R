@@ -51,5 +51,6 @@ bestParam.final = innerTrain(trainFoldIndex = 1:length(data.ts), data = data.ts,
 
 xreg.newdata = tibble(GreatRecession.Ind = c(0,0,0), DotCom_Recession.Ind = c(0,0,0), TwoThousandTen.LevelChange = c(1,1,1),
                                 HOLIDAYS = c(0,0,0), TwoThousandTwo.LevelChange = c(0,0,0)) 
-finalModel  = forecast.ensemble(train = data.ts, horizon = 3, parameters = bestParam.final, xreg.train = data.FE, xreg.newdata = as.matrix(xreg.newdata))
+finalPredictions  = ts(forecast.ensemble(train = data.ts, horizon = 3, parameters = bestParam.final, xreg.train = data.FE, xreg.newdata = as.matrix(xreg.newdata)),
+                 start = c(2019, 8), frequency = 12)
 
