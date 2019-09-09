@@ -117,7 +117,7 @@ randomGridSearch = function(grid, predictions, validation){
 
 forecast.ensemble = function(train, horizon, parameters, xreg.train, xreg.newdata){
   
-  predictions = grabPredictions(train = train, horizon = 3, xreg.train = xreg.train, xreg.newdata = xreg.newdata) %>%
+  predictions = grabPredictions(train = train, horizon = horizon, xreg.train = xreg.train, xreg.newdata = xreg.newdata) %>%
     reduce(., ts.intersect) %>%
     as_tibble(.) %>%
     set_names(c("RWD", "TBATS", "ARIMA", "CES"))
