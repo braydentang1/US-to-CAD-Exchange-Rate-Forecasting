@@ -78,7 +78,7 @@ timeSlices = createTimeSlices(y = data.ts, initialWindow = 210, horizon = 3, fix
 
 results = evaluate.Arima(data = data.ts, timeSlices = timeSlices, xreg = data.FE)
 
-xreg.pred = tibble(GreatRecession.Ind = rep(0, 3), DotCom_Recession.Ind = rep(0,3), TwoThousandTen.LevelChange = rep(1,3), HOLIDAYS =  rep(0,3),
+xreg.pred = tibble(GreatRecession.Ind = rep(0, 3), DotCom_Recession.Ind = rep(0,3), TwoThousandTen.LevelChange = rep(1,3), HOLIDAYS =  c(0,0,1),
                   TwoThousandTwo.LevelChange = rep(0,3))
 
 arima.final = auto.arima(data.ts, stepwise = TRUE, ic = "aicc", stationary = TRUE, xreg = data.FE)

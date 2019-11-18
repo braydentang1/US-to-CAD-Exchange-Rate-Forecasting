@@ -7,7 +7,7 @@ library(smooth)
 library(alfred)
 library(parallel)
 
-source("/home/brayden/GitHub/US-to-CAD-Exchange-Rate-Forecasting/Forecasting/allFunctions.R")
+source("/home/brayden/GitHub/US-to-CAD-Exchange-Rate-Forecasting/src/all_functions.R")
 
 #0.02558 RMSE
 #Slightly better than the RWD
@@ -48,9 +48,8 @@ mean(unlist(finalResults))
 #Find the final parameters using all the data
 bestParam.final = innerTrain(trainFoldIndex = 1:length(data.ts), data = data.ts, iterations = 100, xreg = data.FE)
 #Fit the final model
-
 xreg.newdata = tibble(GreatRecession.Ind = c(0,0,0), DotCom_Recession.Ind = c(0,0,0), TwoThousandTen.LevelChange = c(1,1,1),
-                                HOLIDAYS = c(0,0,0), TwoThousandTwo.LevelChange = c(0,0,0)) 
+                                HOLIDAYS = c(0,0,1), TwoThousandTwo.LevelChange = c(0,0,0)) 
 finalPredictions  = ts(forecast.ensemble(train = data.ts, horizon = 3, parameters = bestParam.final, xreg.train = data.FE, xreg.newdata = as.matrix(xreg.newdata)),
                  start = c(2019, 8), frequency = 12)
 
