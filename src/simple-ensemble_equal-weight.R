@@ -9,28 +9,48 @@ library(alfred)
 #RWD: 0.02575
 #...........................................Import Data.....................................................................#
 
-data = get_fred_series("EXCAUS", "EXCAUS") %>%
+data <- get_fred_series("EXCAUS", "EXCAUS") %>%
   filter(!is.na(EXCAUS)) %>%
   rename(DATE = date) 
 
-data.ts = ts(data$EXCAUS, frequency = 12, start = c(year(data$DATE[1]), month(data$DATE[1])), end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
+data_ts <- ts(
+  data$EXCAUS,
+   frequency = 12,
+    start = c(year(data$DATE[1]), month(data$DATE[1])), 
+    end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
   window(., start = c(2000,1))
 
 #..........................................Feature Engineering..............................................................#
 
-data.FE = data %>% 
-  mutate(GreatRecession.Ind = ifelse(DATE >= ymd("2007-12-01") & DATE <= ymd("2009-06-01"),1,0)) %>%
-  mutate(DotCom_Recession.Ind = ifelse(DATE >= ymd("2001-03-01") & DATE <= ymd("2001-11-01"), 1,0)) %>%
-  mutate(TwoThousandTen.LevelChange = ifelse(year(DATE) >= 2008, 1,0)) %>%
-  mutate(HOLIDAYS = ifelse(month(DATE) == 11 | month(DATE) == 12, 1,0)) %>%
-  mutate(TwoThousandTwo.LevelChange = ifelse(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1,0)) %>%
+data_FE <- data %>% 
+  mutate(great_recession_ind = if_else(DATE >= ymd("2007-12-01") & DATE <= ymd("2009-06-01"),1,0)) %>%
+  mutate(dotcom_bubble = if_else(DATE >= ymd("2001-03-01") & DATE <= ymd("2001-11-01"), 1,0)) %>%
+  mutate(twothousandten_levelchange = if_else(year(DATE) >= 2008, 1,0)) %>%
+  mutate(holidays = if_else(month(DATE) == 11 | month(DATE) == 12, 1,0)) %>%
+  mutate(twothousandtwo_levelchange = if_else(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1,0)) %>%
   filter(DATE >= ymd("2000-1-01")) %>%
   select(-EXCAUS, -DATE) %>%
   data.matrix(.) 
 #.......................................Plot the Time Series................................................................................#
 
-autoplot(data.ts, ts.colour = "black", ts.size = 1) + labs(title = "US/CAD Exchange Rate Over Time", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD", x = "Time")
-autoplot(diff(data.ts), ts.colour = "black", ts.size = 1) +labs(title = "US/CAD Exchange Rate Over Time; 1st Order Differenced Series", subtitle = "Over The Period of January 1971 to April 2019", y = "$1 USD in CAD; Difference", x = "Time")
+autoplot(
+  data_ts, ts.colour = "black", ts.size = 1) + 
+  labs(
+    title = "US/CAD Exchange Rate Over Time",
+    subtitle = "Over The Period of January 1971 to April 2019",
+    y = "$1 USD in CAD", 
+    x = "Time"
+  )
+
+autoplot(
+  diff(data_ts), 
+  ts.colour = "black", ts.size = 1) +
+  labs(
+    title = "US/CAD Exchange Rate Over Time; 1st Order Differenced Series", 
+    subtitle = "Over The Period of January 1971 to April 2019",
+     y = "$1 USD in CAD; Difference",
+      x = "Time"
+)
 
 #......................Evaluation of Various Methods......................................................................#
 #Function that finds monthly RMSE one step ahead in time, with restimation of the model at every step.
@@ -38,153 +58,185 @@ autoplot(diff(data.ts), ts.colour = "black", ts.size = 1) +labs(title = "US/CAD 
 #Exclude bagged ETS by default since it takes a long time to run.
 #Exclude is a character vector that will exclude the fitted models in the vector. Example: c("ETS", "Arima") excludes ETS and Arima from the results.
 
-evaluate.Models = function(data, exclude = "Bagged ETS", timeSlices, xreg){
+evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
   
-  allTrain = timeSlices$train
-  allTest = timeSlices$test
+  all_train <- time_slices$train
+  all_test <- time_slices$test
   
-  error.ETS = vector("numeric", length(allTest))
-  error.Arima = vector("numeric", length(allTest))
-  error.theta = vector("numeric", length(allTest))
-  error.rwd = vector("numeric", length(allTest))
-  error.tbats = vector("numeric", length(allTest))
-  error.baggedETS = vector("numeric", length(allTest))
-  error.STL = vector("numeric", length(allTest))
-  error.CES = vector("numeric", length(allTest))
-  error.Ensemble = vector("numeric", length(allTest))
+  error_ets <- vector("numeric", length(all_test))
+  error_arima <- vector("numeric", length(all_test))
+  error_theta <- vector("numeric", length(all_test))
+  error_rwd <- vector("numeric", length(all_test))
+  error_tbats <- vector("numeric", length(all_test))
+  error_baggedETS <- vector("numeric", length(all_test))
+  error_stl <- vector("numeric", length(all_test))
+  error_ces <- vector("numeric", length(all_test))
+  error_ensemble <- vector("numeric", length(all_test))
 
-  for(i in 1:length(allTest)){
+  for (i in 1:length(all_test)) {
   
-    model.Average = vector("list", 5)
+    model_average <- vector("list", 5)
     
-    train.time = time(data)[allTrain[[i]]]
-    test.time = time(data)[allTest[[i]]]
+    train_time <- time(data)[all_train[[i]]]
+    test_time <- time(data)[all_test[[i]]]
     
-    train = window(data, start = train.time[1], end = train.time[length(train.time)])
-    test = window(data, start = test.time[1], end = test.time[length(test.time)])
+    train <- window(
+      data, 
+      start = train_time[1], 
+      end = train_time[length(train_time)]
+  )
+
+    test <- window(
+       data,
+       start = test_time[1], 
+       end = test_time[length(test_time)]
+  )
 
     #ETS
-    if(!"ETS" %in% exclude){
+    if (!"ETS" %in% exclude) {
       
-    ets.model = ets(train, ic = "aicc")
-    forecast.ets = forecast(ets.model, h = length(test))
-    model.Average[[1]] = forecast.ets$mean
-    error.ETS[i] = accuracy(forecast.ets, x = test)[2,2]
+    ets_model <- ets(train, ic = "aicc")
+    forecast_ets <- forecast(ets_model, h = length(test))
+    model_average[[1]] <- forecast_ets$mean
+    error_ets[i] <- accuracy(forecast_ets, x = test)[2,2]
     
     }
     
     #Auto.Arima
-    if(!"Arima" %in% exclude){
+    if (!"Arima" %in% exclude) {
       
-    train.time = time(data)[allTrain[[i]]]
-    test.time = time(data)[allTest[[i]]]
+    train_time <- time(data)[all_train[[i]]]
+    test_time <- time(data)[all_test[[i]]]
       
-    train = window(data, start = train.time[1], end = train.time[length(train.time)])
-    test = window(data, start = test.time[1], end = test.time[length(test.time)])
+    train <- window(data, start = train_time[1], end = train_time[length(train_time)])
+    test <- window(data, start = test_time[1], end = test_time[length(test_time)])
       
-    xreg.train = xreg[1:length(train),]
-    xreg.test = xreg[1:length(test),]  
+    xreg_train <- xreg[1:length(train), ]
+    xreg_test <- xreg[1:length(test), ]  
       
-    arima.model = auto.arima(train, stepwise = TRUE, ic = "aicc", stationary = TRUE, xreg = xreg.train)
-    forecast.arima = forecast(arima.model, h = length(test), xreg = xreg.test)
-    error.Arima[i] = accuracy(forecast.arima, x = test)[2,2]
+    arima_model <- auto.arima(
+      train,
+      stepwise = TRUE, 
+      ic = "aicc", 
+      stationary = TRUE, 
+      xreg = xreg_train
+  )
+
+    forecast_arima <- forecast(arima_model, h = length(test), xreg = xreg_test)
+    error_arima[i] <- accuracy(forecast_arima, x = test)[2,2]
     
     }
     
     #Theta
-    if(!"Theta" %in% exclude){
+    if (!"Theta" %in% exclude) {
       
-    forecast.theta = thetaf(y = train, h = length(test))
-    model.Average[[2]] = forecast.theta$mean
-    error.theta[i] = accuracy(forecast.theta, x = test)[2,2]
+    forecast_theta <- thetaf(y = train, h = length(test))
+    model_average[[2]] <- forecast_theta$mean
+    error_theta[i] <- accuracy(forecast_theta, x = test)[2,2]
     
     }
     
     #Naive = Random Walk 
-    if(!"RWD" %in% exclude){
+    if (!"RWD" %in% exclude) {
       
-    forecast.rwd = rwf(y = train, h = length(test), drift = TRUE)
-    model.Average[[3]] = forecast.rwd$mean
-    error.rwd[i] = accuracy(forecast.rwd, x = test)[2,2]
+    forecast_rwd <- rwf(y = train, h = length(test), drift = TRUE)
+    model_average[[3]] <- forecast_rwd$mean
+    error_rwd[i] <- accuracy(forecast_rwd, x = test)[2,2]
     
     }
     
     #TBATS/BATS
-    if(!"TBATS" %in% exclude){
+    if (!"TBATS" %in% exclude) {
       
-      model.tbats = tbats(y = train, num.cores = 4)
-      forecast.tbats = forecast(model.tbats, h=length(test))
-      model.Average[[4]] = forecast.tbats$mean
-      error.tbats[i] = accuracy(forecast.tbats, x = test)[2,2]
+      model_tbats <- tbats(y = train, num.cores = 4)
+      forecast_tbats <- forecast(model_tbats, h = length(test))
+      model_average[[4]] <- forecast_tbats$mean
+      error_tbats[i] <- accuracy(forecast_tbats, x = test)[2,2]
       
     }
     
     #Bagged ETS
-    if(!"Bagged ETS" %in% exclude){
+    if (!"Bagged ETS" %in% exclude) {
       
-      model.baggedETS = baggedETS(y = train)
-      forecast.baggedETS = forecast(model.baggedETS, h=length(test))
-      error.baggedETS[i] = accuracy(forecast.baggedETS, x = test)[2,2]
+      model_baggedETS <- baggedETS(y = train)
+      forecast_baggedETS <- forecast(model_baggedETS, h = length(test))
+      error_baggedETS[i] <- accuracy(forecast_baggedETS, x = test)[2,2]
       
     }
     
     #STL
-    if(!"STL" %in% exclude){
+    if (!"STL" %in% exclude) {
       
-      forecast.STL = stlf(y = train, h = length(test), robust = TRUE)
-      model.Average[[5]] = forecast.STL$mean
-      error.STL[i] = accuracy(forecast.STL, x = test)[2,2]
+      forecast_stl <- stlf(y = train, h = length(test), robust = TRUE)
+      model_average[[5]] <- forecast_stl$mean
+      error_stl[i] <- accuracy(forecast_stl, x = test)[2,2]
       
     }
     
     #CES
-    if(!"CES" %in% exclude){
+    if (!"CES" %in% exclude) {
       
-      forecast.CES = auto.ces(y = train, h = length(test))
-      model.Average[[6]] = forecast.CES$forecast
-      error.CES[i] = accuracy(x = test, f = forecast.CES$forecast)[2]
+      forecast_ces <- auto.ces(y = train, h = length(test))
+      model_average[[6]] <- forecast_ces$forecast
+      error_ces[i] <- accuracy(x = test, f = forecast_ces$forecast)[2]
       
     }
     
     #Process the ensemble, take a simple average for now
-    model.Average.Process = model.Average %>% reduce(ts.intersect) %>% rowMeans(.)
+    model_average_process <- model_average %>%
+     reduce(ts.intersect) %>%
+      rowMeans(.)
     
-    error.Ensemble[i] = accuracy(model.Average.Process, x = test)[2]
+    error_ensemble[i] <- accuracy(model_average_process, x = test)[2]
     
   }
   
-  list(ETS = mean(error.ETS, na.rm = TRUE), Auto.Arima = mean(error.Arima, na.rm = TRUE), 
-       Theta = mean(error.theta, na.rm = TRUE), RWD = mean(error.rwd, na.rm = TRUE),
-       TBATS = mean(error.tbats, na.rm = TRUE), baggedETS = mean(error.baggedETS, na.rm = TRUE),
-       STL = mean(error.STL, na.rm = TRUE), CES = mean(error.CES, na.rm = TRUE),
-       Ensemble = mean(error.Ensemble, na.rm = TRUE))
+  list(
+    ets = mean(error_ets, na.rm = TRUE), 
+    auto_arima = mean(error_arima, na.rm = TRUE), 
+    theta = mean(error_theta, na.rm = TRUE),
+    rwd = mean(error_rwd, na.rm = TRUE),
+    tbats = mean(error_tbats, na.rm = TRUE), 
+    baggedETS = mean(error_baggedETS, na.rm = TRUE),
+    stl = mean(error_stl, na.rm = TRUE), 
+    ces = mean(error_ces, na.rm = TRUE),
+    ensemble = mean(error_ensemble, na.rm = TRUE)
+  )
   
 }
 
 #......................Custom Bagging Function for the Theta Method...................................................#
-#Not used because it leads to a worse model.
-#Probably could have used a premade function already in the forecast package.
+# Not used because it leads to a worse model.
+# Probably could have used a premade function already in the forecast package.
 
-evaluate.baggedTheta = function(n, data, timeSlices){
+evaluate_bagged_theta <- function(n, data, time_slices) {
   
-  allTrain = timeSlices$train
-  allTest = timeSlices$test
-  error= vector("numeric", length(test))
+  all_train <- time_slices$train
+  all_test <- time_slices$test
+  error <- vector("numeric", length(test))
   
-  for(i in 1:length(allTest)){
+  for (i in 1:length(all_test)) {
     
-    train.time = time(data)[allTrain[[i]]]
-    test.time = time(data)[allTest[[i]]]
+    train_time <- time(data)[all_train[[i]]]
+    test_time <- time(data)[all_test[[i]]]
     
-    train = window(data, start = train.time[1], end = train.time[length(train.time)])
-    test = window(data, start = test.time[1], end = test.time[length(test.time)])
+    train <- window(data, start = train_time[1], end = train_time[length(train_time)])
+    test <- window(data, start = test_time[1], end = test_time[length(test_time)])
     
     set.seed(200350623)
-    bootstrap.train = bld.mbb.bootstrap(x = train, num = n)
+    bootstrap_train <- bld.mbb.bootstrap(x = train, num = n)
     
-    predictions = lapply(bootstrap.train, FUN = forecast.BaggedTheta, h = length(test))
-    model.Average.Process = predictions %>% reduce(ts.intersect) %>% rowMeans(.)
-    error[i] = accuracy(model.Average.Process, x = test)[2]
+    predictions <- map_dfr(
+      bootstrap_train,
+      forecast_bagged_theta,
+      h = length(test)
+    )
+
+    model_average_process <- predictions %>% 
+    reduce(ts.intersect) %>% 
+    rowMeans(.)
+
+    error[i] <- accuracy(model_average_process, x = test)[2]
     
   }
   
@@ -194,17 +246,26 @@ evaluate.baggedTheta = function(n, data, timeSlices){
 
 #..................................Wrapper to make calls to forecasting function easier when all of the bootstrapped time series are in a list..............# 
 #Not used because it leads to a worse model.
-forecast.BaggedTheta = function(x, h){
+forecast_bagged_theta <- function(x, h) {
   
-  forecast.theta = thetaf(y = x, h = h)$mean
+  forecast_theta <- thetaf(y = x, h = h)$mean
 
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
-timeSlices = createTimeSlices(y = data.ts, initialWindow = 200, horizon = 3, fixedWindow = FALSE)
+time_slices <- createTimeSlices(
+  y = data_ts, 
+  initialWindow = 200, 
+  horizon = 3, 
+  fixedWindow = FALSE
+  )
 
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
-results = evaluate.Models(data = data.ts, exclude = c("Bagged ETS", "ETS", "Theta", "STL"), timeSlices = timeSlices, xreg = data.FE)
+results <- evaluate_models(
+  data = data_ts, 
+  exclude = c("Bagged ETS", "ETS", "Theta", "STL"),
+  time_slices = time_slices, 
+  xreg = data_FE)
 
 #Tried using this but model is much worse. Don't use.
-#results.BaggedTheta = evaluate.baggedTheta(n = 5000, data = data.ts)
+#results_bagged_theta <- evaluate_bagged_theta(n = 5000, data = data_ts)

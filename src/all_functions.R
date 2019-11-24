@@ -8,19 +8,21 @@ library(alfred)
 
 #......................Fit the ensemble model...............................#
 
-inner_train = function(train_fold_index, data, iterations, xreg) {
+inner_train <- function(train_fold_index, data, iterations, xreg) {
   
   #' Validates the inner train set using walk forward cross validation.
   #'
   #' @param train_fold_index A vector of indices to use as the training fold
   #' @param data The complete time series as a ts object
   #' @param iterations The number of iterations of random grid search to use
-  #' @param xreg A matrix 
+  #' @param xreg A matrix that provides additional variables to include in the ARIMA model. Must be the same length as 
+  #'  the vector train_fold_index.
   #'
-  #' @return
+  #' @return A tibble containing the best weights to use for each model in the weighted average for
+  #'  predictions.
+  #'
   #' @export
   #'
-  #' @examples
   
   set.seed(200350623)
   random_grid <- tibble(
@@ -93,9 +95,24 @@ inner_train = function(train_fold_index, data, iterations, xreg) {
   
 }
 
-outer_fold <- function(data, train_folds_index, test_folds_index, parameters, xreg) {
-  
-  outer_train_time <- time(data)[train_folds_index]
+outer_fold <- function(data, train_fold_index, test_fold_index, parameters, xreg) {
+
+  #' Trains all the entire training data, and evaluates on the test set using 
+  #' walk forward cross validation.
+  #'
+  #' @param data The complete time series as a ts object
+  #' @param train_fold_index A vector of indices to use as the training fold
+  #' @param test_fold_index A vector of indices to use as the testing fold
+  #' @param parameters A tibble of optimal parameters (weights)
+  #'  to use in the weighted average calculation.
+  #' @param xreg A matrix that provides additional variables to include in the ARIMA model. Must be the same length as 
+  #'  the vector train_fold_index.
+  #'
+  #' @return A numeric vector of length equal to one containing the root mean squared error.
+  #' @export
+  #'
+
+  outer_train_time <- time(data)[train_fold_index]
   
   outer_train <- window(
     data, 
@@ -104,7 +121,7 @@ outer_fold <- function(data, train_folds_index, test_folds_index, parameters, xr
   
   xreg_train <- xreg[1:length(outer_train_time), ]
   
-  test_time <- time(data)[test_folds_index]
+  test_time <- time(data)[test_fold_index]
   test <- window(data, start = test_time[1], end = test_time[length(test_time)])
   xreg_test <- xreg[1:length(test_time), ]
   
@@ -117,19 +134,30 @@ outer_fold <- function(data, train_folds_index, test_folds_index, parameters, xr
     as_tibble(.) %>%
     set_names(c("rwd", "tbats", "arima", "ces"))
   
-  score <- random_grid_search(
+  random_grid_search(
     grid = parameters,
     predictions = final_predictions,
     validation = test)
-  
-  score
-  
+   
 }
 
 
 grab_predictions <- function(train, horizon, xreg_train, xreg_newdata) {
   
-  model_average = vector("list", 4)
+  #' Calculates the predictions for each of the level one learners.
+  #'
+  #' @param train The training time series
+  #' @param horizon The number of steps ahead to forecast
+  #' @param xreg_train A matrix that provides additional variables to include in the
+  #'  ARIMA model. Must be equal in length to the time series "train".
+  #' @param xreg_newdata A matrix that provides the same columns as that of "xreg_train" but 
+  #'  for the observations to be predicted. Must be equal in length to that of "horizon".
+  #'
+  #' @return A list containing the predictions of each model to be used in ensembling.
+  #' @export
+  #'
+
+  model_average <- vector("list", 4)
   
   forecast_rwd <- rwf(y = train, h = horizon, drift = TRUE)
   model_average[[1]] <- forecast_rwd$mean
@@ -155,9 +183,21 @@ grab_predictions <- function(train, horizon, xreg_train, xreg_newdata) {
 
 
 random_grid_search <- function(grid, predictions, validation) {
-  
+
+  #' Finds an optimal set of weights for each model via. random grid search.
+  #'
+  #' @param grid The grid of candidate weights, as a tibble,
+  #'  to be used for each model. Should contain weights for the random walk, TBATS, ARIMA, 
+  #'  complex exponential smoothing methods in that order, and then a column on the end that
+  #'  representing the sums of each row named sum_of_weights.
+  #' @param predictions A tibble of predictions from the level one base learners
+  #' @param validation The time series object representing the validation set
+  #'
+  #' @return A list containing the predictions of each model to be used in ensembling.
+  #' @export
+  #'
   score <- vector("numeric", nrow(grid))
-  constant <- which(colnames(grid) == "sumofWeights")
+  constant <- which(colnames(grid) == "sum_of_weights")
 
   for (k in 1:nrow(grid)) {
     
@@ -180,7 +220,21 @@ random_grid_search <- function(grid, predictions, validation) {
 }
 
 forecast_ensemble <- function(train, horizon, parameters, xreg_train, xreg_newdata) {
-  
+
+  #' Calculates the forecasts using the learned ensemble model.
+  #'
+  #' @param train The training time series, given as a ts object
+  #' @param horizon An integer vector of length one that provides the number of steps ahead
+  #'  to forecast.
+  #' @param parameters A tibble that gives the optimal weights for each level one base learner
+  #' @param xreg_train A matrix that provides additional variables to be used in the ARIMA model.
+  #'  Must be of the same length to that of "train".
+  #' @param xreg_newdata A matrix that contains the same columns as that of xreg_train, but 
+  #'  for new observations. Must be of the same length to that of 'horizon'.
+  #'
+  #' @return A tibble containing the h-ahead forecast.
+  #' @export
+  #'
   predictions <- grab_predictions(
     train = train,
     horizon = horizon,
@@ -191,7 +245,7 @@ forecast_ensemble <- function(train, horizon, parameters, xreg_train, xreg_newda
     set_names(c("rwd", "tbats", "arima", "ces"))
   
   constant <- which(colnames(parameters) == "sum_of_weights")
-  
+    
   predictions_tmp <-
     predictions %>% 
     transmute(
