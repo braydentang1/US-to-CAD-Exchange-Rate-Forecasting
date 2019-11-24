@@ -1,7 +1,7 @@
 # US-to-CAD-Exchange-Rate-Forecasting
 An attempt to forecast the US to CAD Exchange Rate- Inspired by a school project
 
-Currently, the best model differs depending on the movement of the exchange over time. Right now, a simple random walk with drift appears to be the most favourable model (sits at around 0.025 RMSE), though at times is beat by a more complicated ensemble method that utilizes a [TBATS](https://pkg.robjhyndman.com/forecast/reference/tbats.html), [complex exponential smoothing](https://kourentzes.com/forecasting/2016/10/22/complex-exponential-smoothing/), and an [ARIMAX](https://robjhyndman.com/hyndsight/arimax/) (ARIMA with exogenous regressors) model in addition to the random walk with drift.
+Currently, the best model differs depending on the movement of the exchange over time. Right now, a simple random walk with drift appears to be the most favourable model (sits at around 0.025 RMSE), though at times is beat by a more complicated ensemble method that utilizes a [TBATS model](https://pkg.robjhyndman.com/forecast/reference/tbats.html), a [complex exponential smoothing model](https://kourentzes.com/forecasting/2016/10/22/complex-exponential-smoothing/), and an [ARIMAX](https://robjhyndman.com/hyndsight/arimax/) (ARIMA with exogenous regressors) model in addition to the random walk with drift.
 
 This project is inspired by what my friend (Riley Peters) and I did in our term project at the University of Regina, however, with a much greater emphasis on:
 
