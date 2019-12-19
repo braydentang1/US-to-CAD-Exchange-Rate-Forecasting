@@ -9,7 +9,7 @@ library(parallel)
 
 source("src/all_functions.R")
 
-#0.02558 RMSE
+#0.02463 RMSE
 #Slightly better than the RWD
 #......................Import Data..........................................#
 

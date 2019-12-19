@@ -7,7 +7,7 @@ library(alfred)
 
 #Best single method:
 #RWD: 0.02575
-#...........................................Import Data.....................................................................#
+#.......... .................................Import Data.....................................................................#
 
 data <- get_fred_series("EXCAUS", "EXCAUS") %>%
   filter(!is.na(EXCAUS)) %>%
@@ -59,6 +59,29 @@ autoplot(
 #Exclude is a character vector that will exclude the fitted models in the vector. Example: c("ETS", "Arima") excludes ETS and Arima from the results.
 
 evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
+  
+  #' Evaluates a bunch of time series forecasting methods based off RMSE for a given time series.
+  #'
+  #'@param data The training time series as a ts object
+  #'@param exclude A character vector that contains any models to exclude from the 
+  #'  evaluation. Possible elements include: "Bagged ETS", "Arima", "ETS", "STL", "CES", "TBATS",
+  #'  "RWD", and "Theta". Default: "Bagged ETS".
+  #'@param time_slices A list of train and test indices for each split of walk forward cross
+  #'  validation.
+  #'@param xreg A matrix that contains the exogenous variables for the ARIMAX model. Must
+  #'  be the same length of the time series given to the argument data. Must be a matrix.
+  #'  
+  #'@return A list of the RMSE for each of the models not given in "exclude: 
+  #'
+  #'@examples 
+  #'evaluate_models(
+  #' data = my_time_series,
+  #' exclude = c("Bagged ETS", "ARIMA"),
+  #' time_slices = caret::createTimeSlices(y = my_time_series, horizon = 3, fixedWindow = FALSE),
+  #' xreg = my_exog_var
+  #' )
+  #'
+  
   
   all_train <- time_slices$train
   all_test <- time_slices$test
@@ -203,53 +226,6 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
     ensemble = mean(error_ensemble, na.rm = TRUE)
   )
   
-}
-
-#......................Custom Bagging Function for the Theta Method...................................................#
-# Not used because it leads to a worse model.
-# Probably could have used a premade function already in the forecast package.
-
-evaluate_bagged_theta <- function(n, data, time_slices) {
-  
-  all_train <- time_slices$train
-  all_test <- time_slices$test
-  error <- vector("numeric", length(test))
-  
-  for (i in 1:length(all_test)) {
-    
-    train_time <- time(data)[all_train[[i]]]
-    test_time <- time(data)[all_test[[i]]]
-    
-    train <- window(data, start = train_time[1], end = train_time[length(train_time)])
-    test <- window(data, start = test_time[1], end = test_time[length(test_time)])
-    
-    set.seed(200350623)
-    bootstrap_train <- bld.mbb.bootstrap(x = train, num = n)
-    
-    predictions <- map_dfr(
-      bootstrap_train,
-      forecast_bagged_theta,
-      h = length(test)
-    )
-
-    model_average_process <- predictions %>% 
-    reduce(ts.intersect) %>% 
-    rowMeans(.)
-
-    error[i] <- accuracy(model_average_process, x = test)[2]
-    
-  }
-  
-  mean(error)
-  
-}
-
-#..................................Wrapper to make calls to forecasting function easier when all of the bootstrapped time series are in a list..............# 
-#Not used because it leads to a worse model.
-forecast_bagged_theta <- function(x, h) {
-  
-  forecast_theta <- thetaf(y = x, h = h)$mean
-
 }
 
 #.............................Create the cross validation time slices.......................................................................# 
