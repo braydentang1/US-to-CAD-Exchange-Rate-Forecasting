@@ -2,6 +2,7 @@ library(tidyverse)
 library(forecast)
 library(caret)
 library(parallel)
+library(zoo)
 library(smooth)
 library(lubridate)
 library(alfred)
@@ -40,7 +41,7 @@ inner_train <- function(train_fold_index, data, iterations, xreg) {
   
   all_inner_sets <- createTimeSlices(
     y = outer_train, 
-    initialWindow = 150,
+    initialWindow = length(outer_train) - 7,
     horizon = 3, 
     fixedWindow = FALSE)
   
@@ -211,7 +212,7 @@ random_grid_search <- function(grid, predictions, validation) {
           ces * as.numeric(grid[k, 4] / grid[k, constant])
         )
     
-    score[k] <- accuracy(f = predictions_tmp$weighted_average, x = validation)[2]
+    score[k] <- forecast::accuracy(f = predictions_tmp$weighted_average, x = validation)[2]
     
   }
   
@@ -257,5 +258,84 @@ forecast_ensemble <- function(train, horizon, parameters, xreg_train, xreg_newda
       )
   
 
+}
+
+point_predictions <- function(x, iterations = 60, xreg, to = NULL) {
+  
+  #' Fits the ensemble model and then calculates three month forecasts.
+  #'
+  #' @param x The time series to use when fitting the ensemble models. Must be a ts object.
+  #' @param iterations The number of iterations to use in random grid search when fitting the ensemble
+  #' @param xreg The exogenous variables to be used for the ARIMAX model in the ensemble.
+  #' @param to An optional vector specifying the "to" date as a date object.
+  #'
+  #' @return A time series of forecasted values three months into the future.
+  #' @export
+  #'
+  
+  # Find the final parameters using all of the data
+  
+  if (!is.null(to)) {
+    month_to <- ifelse(month(to) - 1 == 0, 12, month(to) - 1)
+    year_to <- ifelse(month(to) - 1 == 0, year(to) - 1, year(to))
+    x <- window(x, end = c(year_to, month_to))
+  }
+  
+  best_param_final <- inner_train(
+    train_fold_index = 1:length(x),
+    data = x, 
+    iterations = iterations, 
+    xreg = xreg[1:length(x), ]
+  )
+  
+  # Fit the final model
+  
+  months_end <- month(zoo::as.Date(x))[length(x)]
+  years_end <- year(zoo::as.Date(x))[length(x)]
+  months_forecast <- c(months_end + 1, months_end + 2, months_end + 3) %>%
+    if_else(. > 12, . - 12, .)
+  
+  xreg_newdata <- tibble(
+    great_recession_ind = c(0, 0, 0),
+    dotcom_bubble = c(0, 0, 0), 
+    twothousandten_levelchange = c(1, 1, 1),
+    holidays = if_else(months_forecast == 11 | months_forecast == 12, 1, 0), 
+    twothousandtwo_levelchange = c(0, 0, 0)
+  )
+  
+  ts(forecast_ensemble(
+    train = x,
+    horizon = 3,
+    parameters = best_param_final, 
+    xreg_train = xreg[1:length(x), ],
+    xreg_newdata = as.matrix(xreg_newdata)),
+    start = c(
+      if_else(months_end + 1 == 13, years_end + 1, years_end), 
+      if_else(months_end + 1 == 13, 1, months_end + 1)), 
+    frequency = 12)
+  
+}
+
+simulated_residuals <- function(x, forecast_latest, xreg, data_ts) {
+  
+  #' This function simulates residuals to use for creating prediction intervals.
+  #'
+  #' @param x The simulated time series, created through bootstrapping
+  #' @param forecast_latest The time series forecasts of y over the period of simulation
+  #' @param xreg The exogenous regressors for the ARIMAX model. Must be a matrix.
+  #' @param data The entire, full time series.
+  #'
+  #' @return A ts object that calculates residuals based off a simulated time series x.
+  #' @export
+  #'
+  
+  y <- point_predictions(x = x, iterations = 60, xreg = xreg)
+  
+  ts.intersect(data_ts, y, dframe = TRUE) %>%
+    transmute(residual = data_ts - weighted_average) %>%
+    mutate(horizon = c("time1", "time2", "time3")) %>%
+    tidyr::spread(key = horizon, value = residual) %>%
+    as_tibble(., .name_repair = "unique")
+  
 }
 

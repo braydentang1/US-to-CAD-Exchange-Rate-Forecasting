@@ -68,7 +68,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
   #'  "RWD", and "Theta". Default: "Bagged ETS".
   #'@param time_slices A list of train and test indices for each split of walk forward cross
   #'  validation.
-  #'@param xreg A matrix that contains the exogenous variables for the ARIMAX model. Must
+  #'@param xreg A matrix that contains the exogenous variables for the ARIMAX/CES models. Must
   #'  be the same length of the time series given to the argument data. Must be a matrix.
   #'  
   #'@return A list of the RMSE for each of the models not given in "exclude: 
@@ -81,7 +81,6 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
   #' xreg = my_exog_var
   #' )
   #'
-  
   
   all_train <- time_slices$train
   all_test <- time_slices$test
@@ -121,18 +120,12 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
     ets_model <- ets(train, ic = "aicc")
     forecast_ets <- forecast(ets_model, h = length(test))
     model_average[[1]] <- forecast_ets$mean
-    error_ets[i] <- accuracy(forecast_ets, x = test)[2,2]
+    error_ets[i] <- forecast::accuracy(forecast_ets, x = test)[2,2]
     
     }
     
     #Auto.Arima
-    if (!"Arima" %in% exclude) {
-      
-    train_time <- time(data)[all_train[[i]]]
-    test_time <- time(data)[all_test[[i]]]
-      
-    train <- window(data, start = train_time[1], end = train_time[length(train_time)])
-    test <- window(data, start = test_time[1], end = test_time[length(test_time)])
+    if (!"ARIMA" %in% exclude) {
       
     xreg_train <- xreg[1:length(train), ]
     xreg_test <- xreg[1:length(test), ]  
@@ -146,7 +139,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
   )
 
     forecast_arima <- forecast(arima_model, h = length(test), xreg = xreg_test)
-    error_arima[i] <- accuracy(forecast_arima, x = test)[2,2]
+    error_arima[i] <- forecast::accuracy(forecast_arima, x = test)[2,2]
     
     }
     
@@ -155,7 +148,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
     forecast_theta <- thetaf(y = train, h = length(test))
     model_average[[2]] <- forecast_theta$mean
-    error_theta[i] <- accuracy(forecast_theta, x = test)[2,2]
+    error_theta[i] <- forecast::accuracy(forecast_theta, x = test)[2,2]
     
     }
     
@@ -164,17 +157,17 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
     forecast_rwd <- rwf(y = train, h = length(test), drift = TRUE)
     model_average[[3]] <- forecast_rwd$mean
-    error_rwd[i] <- accuracy(forecast_rwd, x = test)[2,2]
+    error_rwd[i] <- forecast::accuracy(forecast_rwd, x = test)[2,2]
     
     }
     
     #TBATS/BATS
     if (!"TBATS" %in% exclude) {
       
-      model_tbats <- tbats(y = train, num.cores = 4)
+      model_tbats <- tbats(y = train, num.cores = 2)
       forecast_tbats <- forecast(model_tbats, h = length(test))
       model_average[[4]] <- forecast_tbats$mean
-      error_tbats[i] <- accuracy(forecast_tbats, x = test)[2,2]
+      error_tbats[i] <- forecast::accuracy(forecast_tbats, x = test)[2,2]
       
     }
     
@@ -183,7 +176,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
       model_baggedETS <- baggedETS(y = train)
       forecast_baggedETS <- forecast(model_baggedETS, h = length(test))
-      error_baggedETS[i] <- accuracy(forecast_baggedETS, x = test)[2,2]
+      error_baggedETS[i] <- forecast::accuracy(forecast_baggedETS, x = test)[2,2]
       
     }
     
@@ -192,16 +185,19 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
       forecast_stl <- stlf(y = train, h = length(test), robust = TRUE)
       model_average[[5]] <- forecast_stl$mean
-      error_stl[i] <- accuracy(forecast_stl, x = test)[2,2]
+      error_stl[i] <- forecast::accuracy(forecast_stl, x = test)[2,2]
       
     }
     
     #CES
     if (!"CES" %in% exclude) {
       
-      forecast_ces <- auto.ces(y = train, h = length(test))
+      ces_combined <- ts.union(train, test, dframe = TRUE) %>%
+        gather(., na.rm = TRUE)
+      
+      forecast_ces <- auto.ces(y = ts(ces_combined$value, start = train_time[1], frequency = 12), h = length(test), holdout = TRUE)
       model_average[[6]] <- forecast_ces$forecast
-      error_ces[i] <- accuracy(x = test, f = forecast_ces$forecast)[2]
+      error_ces[i] <- forecast::accuracy(x = test, f = forecast_ces$forecast)[2]
       
     }
     
@@ -210,7 +206,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
      reduce(ts.intersect) %>%
       rowMeans(.)
     
-    error_ensemble[i] <- accuracy(model_average_process, x = test)[2]
+    error_ensemble[i] <- forecast::accuracy(model_average_process, x = test)[2]
     
   }
   
@@ -239,7 +235,7 @@ time_slices <- createTimeSlices(
 #I exclude the ARIMA and Bagged ETS Models because they are significantly worse than the others
 results <- evaluate_models(
   data = data_ts, 
-  exclude = c("Bagged ETS", "ETS", "Theta", "STL"),
+  exclude = c("Bagged ETS", "ETS", "STL", "ARIMA", "TBATS"),
   time_slices = time_slices, 
   xreg = data_FE)
 

@@ -10,7 +10,6 @@ library(parallel)
 source("src/all_functions.R")
 
 #0.02463 RMSE
-#Slightly better than the RWD
 #......................Import Data..........................................#
 
 data <- get_fred_series("EXCAUS", "EXCAUS") %>%
@@ -41,7 +40,7 @@ data_FE <- data %>%
 
 time_slices <- createTimeSlices(
   y = data_ts, 
-  initialWindow = 200,
+  initialWindow = length(data_ts) - 12,
    horizon = 3, 
    fixedWindow = FALSE
 )
@@ -50,9 +49,9 @@ best_parameters <- mclapply(
   X = time_slices$train,
   FUN = inner_train, 
   data = data_ts,
-  iterations = 100, 
+  iterations = 60, 
   xreg = data_FE, 
-  mc.cores = detectCores()
+  mc.cores = 4
 )
 
 # For single threaded
@@ -68,39 +67,3 @@ final_results <- pmap_dbl(
   list(time_slices$train, time_slices$test, best_parameters),
    ~outer_fold(data = data_ts, ..1, ..2, ..3, xreg = data_FE)) %>%
   mean(.)
-
-#.........................................Forecast three months ahead.......................................................#
-
-# Find the final parameters using all of the data
-best_param_final <- inner_train(
-  train_fold_index = 1:length(data_ts),
-  data = data_ts, 
-  iterations = 100, 
-  xreg = data_FE
-)
-# Fit the final model
-
-months_end <- month(data$DATE)[length(data$DATE)]
-years_end <- year(data$DATE)[length(data$DATE)]
-months_forecast <- c(months_end + 1, months_end + 2, months_end + 3) %>%
-  if_else(. > 12, . - 12, .)
-
-xreg_newdata <- tibble(
-  great_recession_ind = c(0, 0, 0),
-  dotcom_bubble = c(0, 0, 0), 
-  twothousandten_levelchange = c(1, 1, 1),
-  holidays = if_else(months_forecast == 11 | months_forecast == 12, 1, 0), 
-  twothousandtwo_levelchange = c(0, 0, 0)
-  ) 
-
-final_predictions  <- ts(forecast_ensemble(
-  train = data_ts,
-  horizon = 3,
-  parameters = best_param_final, 
-  xreg_train = data_FE,
-  xreg_newdata = as.matrix(xreg_newdata)),
-start = c(
-  if_else(months_end + 1 == 13, years_end + 1, years_end), 
-  if_else(months_end + 1 == 13, 1, months_end + 1)), 
-frequency = 12)
-
