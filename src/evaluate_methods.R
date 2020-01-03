@@ -113,13 +113,13 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
        end = test_time[length(test_time)]
   )
     
-  naive_forecasts <- ts.intersect(train, stats::lag(train, -1), dframe = TRUE) %>%
-    rename_at(., .vars = vars(2), ~"naive") %>%
-    mutate(naive = as.numeric(naive),
-           train = as.numeric(train))
-  
-  mae_train <- mae(naive_forecasts,
-                   truth = train, estimate = naive)$.estimate
+  # naive_forecasts <- ts.intersect(train, stats::lag(train, -1), dframe = TRUE) %>%
+  #   rename_at(., .vars = vars(2), ~"naive") %>%
+  #   mutate(naive = as.numeric(naive),
+  #          train = as.numeric(train))
+  # 
+  # mae_train <- mae(naive_forecasts,
+  #                  truth = train, estimate = naive).$estimate
 
     #ETS
     if (!"ETS" %in% exclude) {
@@ -127,10 +127,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
     ets_model <- ets(train, ic = "aicc")
     forecast_ets <- forecast(ets_model, h = length(test))
     model_average[[1]] <- forecast_ets$mean
-    error_ets[i] <- yardstick::mase_vec(
+    error_ets[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
-      estimate = as.numeric(forecast_ets$mean),
-      mae_train = mae_train)
+      estimate = as.numeric(forecast_ets$mean))
     
     }
     
@@ -149,10 +148,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
   )
 
     forecast_arima <- forecast(arima_model, h = length(test), xreg = xreg_test)
-    error_arima[i] <- yardstick::mase_vec(
+    error_arima[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
-      estimate = as.numeric(forecast_arima$mean),
-      mae_train = mae_train)
+      estimate = as.numeric(forecast_arima$mean))
     
     }
     
@@ -161,10 +159,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
     forecast_theta <- thetaf(y = train, h = length(test))
     model_average[[2]] <- forecast_theta$mean
-    error_theta[i] <- yardstick::mase_vec(
+    error_theta[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
-      estimate = as.numeric(forecast_theta$mean),
-      mae_train = mae_train)
+      estimate = as.numeric(forecast_theta$mean))
     
     }
     
@@ -173,10 +170,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
     forecast_rwd <- rwf(y = train, h = length(test), drift = TRUE)
     model_average[[3]] <- forecast_rwd$mean
-    error_rwd[i] <- yardstick::mase_vec(
+    error_rwd[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
-      estimate = as.numeric(forecast_rwd$mean),
-      mae_train = mae_train)
+      estimate = as.numeric(forecast_rwd$mean))
     
     }
     
@@ -186,10 +182,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       model_tbats <- tbats(y = train, num.cores = 2)
       forecast_tbats <- forecast(model_tbats, h = length(test))
       model_average[[4]] <- forecast_tbats$mean
-      error_tbats[i] <- yardstick::mase_vec(
+      error_tbats[i] <- yardstick::mae_vec(
         truth = as.numeric(test), 
-        estimate = as.numeric(forecast_tbats$mean),
-        mae_train = mae_train)
+        estimate = as.numeric(forecast_tbats$mean))
       
     }
     
@@ -198,10 +193,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
       model_baggedETS <- baggedETS(y = train)
       forecast_baggedETS <- forecast(model_baggedETS, h = length(test))
-      error_baggedETS[i] <- yardstick::mase_vec(
+      error_baggedETS[i] <- yardstick::mae_vec(
         truth = as.numeric(test), 
-        estimate = as.numeric(forecast_baggedETS$mean),
-        mae_train = mae_train)
+        estimate = as.numeric(forecast_baggedETS$mean))
       
     }
     
@@ -210,10 +204,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
       forecast_stl <- stlf(y = train, h = length(test), robust = TRUE)
       model_average[[5]] <- forecast_stl$mean
-      error_stl[i] <- yardstick::mase_vec(
+      error_stl[i] <- yardstick::mae_vec(
         truth = as.numeric(test), 
-        estimate = as.numeric(forecast_stl$mean),
-        mae_train = mae_train)
+        estimate = as.numeric(forecast_stl$mean))
       
     }
     
@@ -225,10 +218,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
       
       forecast_ces <- auto.ces(y = ts(ces_combined$value, start = train_time[1], frequency = 12), h = length(test), holdout = TRUE)
       model_average[[6]] <- forecast_ces$forecast
-      error_ces[i] <- yardstick::mase_vec(
+      error_ces[i] <- yardstick::mae_vec(
         truth = as.numeric(test), 
-        estimate = as.numeric(forecast_ces$forecast),
-        mae_train = mae_train)
+        estimate = as.numeric(forecast_ces$forecast))
       
     }
     
@@ -237,10 +229,9 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
      reduce(ts.intersect) %>%
       rowMeans(.)
     
-    error_ensemble[i] <- yardstick::mase_vec(
+    error_ensemble[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
-      estimate = as.numeric(model_average_process),
-      mae_train = mae_train)
+      estimate = as.numeric(model_average_process))
     
   }
   
