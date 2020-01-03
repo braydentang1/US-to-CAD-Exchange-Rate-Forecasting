@@ -1,7 +1,7 @@
 # US-to-CAD-Exchange-Rate-Forecasting
 An attempt to forecast the US to CAD Exchange Rate- Inspired by a school project
 
-One can view a Shiny app [here.](https://braydentang1.shinyapps.io/excaus_forecast/) that summarizes the results of this repository.
+One can view a Shiny app [here,](https://braydentang1.shinyapps.io/excaus_forecast/) that summarizes the results of this repository.
 
 This project is inspired by what my friend (Riley Peters) and I did in our term project at the University of Regina, however, with a much greater emphasis on:
 
