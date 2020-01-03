@@ -4,7 +4,7 @@
 
 - The average squared difference between the actual observed value of the exchange rate and the forecasted rate given by the model selected. The square root of this average is taken to return the error on the original units of the axis. Mathematically,
 
-$$\sqrt{\frac{1}{T}\sum_{t = 1}^{h} (y_{t} - \hat y_{t})^2}, $$
+$$\sqrt{\frac{1}{h}\sum_{t = 1}^{h} (y_{t} - \hat y_{t})^2}, $$
 
 $\text{where} \ \hat y_{t} \  \text{is the forecasted value of the exchange rate at time t for h = 3 point forecasts.}$ 
 
@@ -12,7 +12,7 @@ $\text{where} \ \hat y_{t} \  \text{is the forecasted value of the exchange rate
 
 - The average absolute difference between the actual observed value of the exchange rate and the forecasted rate given by the model selected. Mathematically,
 
-$$\frac{1}{T}\sum_{t = 1}^{h} \left|y_{t} - \hat y_{t}\right| $$
+$$\frac{1}{h}\sum_{t = 1}^{h} \left|y_{t} - \hat y_{t}\right| $$
 
 $\text{where} \ \hat y_{t} \  \text{is the forecasted value of the exchange rate at time t for h point forecasts.}$
 

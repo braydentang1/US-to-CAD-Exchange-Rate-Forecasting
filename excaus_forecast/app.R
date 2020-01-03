@@ -7,29 +7,10 @@ library(alfred)
 library(shinythemes)
 library(shinyhelper)
 library(shinyBS)
+library(DT)
 library(yardstick)
 
-source("../src/all_functions.R")
-
-msis <- function(lower, upper, alpha, future_obs, m = 1) {
-
-    total_width <- sum(upper - lower)
-    penalty <- sum((2 / alpha) * ((future_obs < lower) * (lower - future_obs) + (future_obs > upper) * (future_obs - upper)))
-    numerator <- total_width + penalty
-
-    year_to <- time(future_obs) - 1/12
-    train_ts <- window(data_ts, end = year_to[1]) 
-    
-    naive_vs_real <- ts.intersect(train_ts, stats::lag(data_ts, -m), dframe = TRUE) %>%
-        rename_at(., .vars = vars(2), ~"naive") %>%
-        mutate(train_ts = as.numeric(train_ts),
-               naive = as.numeric(naive))
-    
-    denominator <- mae(data = naive_vs_real, truth = train_ts, estimate = naive)$.estimate
-    
-    numerator / (length(lower) * denominator)
-    
-}
+source("src/all_functions.R")
 
 data <- get_fred_series("EXCAUS", "EXCAUS") %>% 
     filter(!is.na(EXCAUS)) %>%
@@ -52,14 +33,14 @@ data_FE <- data %>%
     select(-EXCAUS, -DATE) %>%
     data.matrix(.) 
 
-residuals_sim_df <- bind_rows(readRDS("../data/rds/residuals_sim.rds"))
-all_predictions <- readRDS("../data/rds/predictions.rds")
+residuals_sim_df <- bind_rows(readRDS("data/rds/residuals_sim.rds"))
+all_predictions <- readRDS("data/rds/predictions.rds")
 
 ui <- fluidPage(
 
     # Application title
     titlePanel("Forecasting the US to Canadian Exchange Rate"),
-    theme = shinytheme("slate"),
+    theme = shinytheme("darkly"),
     sidebarLayout(
         sidebarPanel(
             sliderTextInput(
@@ -93,15 +74,24 @@ ui <- fluidPage(
                     "TBATS"),
                 multiple = FALSE,
                 selected = "Ensemble"
-            ) %>% helper(),
-            helpText("Click icon to the right for description...") %>% helper(size = "l", icon = "info", content = "description", type = "markdown", buttonLabel = "Close")
+            ) %>% helper(size = "l", content = "model_descriptions", type = "markdown", buttonLabel = "Close"),
+            bsTooltip("model", "Click the ? icon for more information on the chosen model.", "right", options = list(container = "body")),
+            withMathJax(helpText(paste("Click the information icon for a description of the app $ \\rightarrow $")) %>% helper(size = "l", icon = "info", content = "description", type = "markdown", buttonLabel = "Close"))
         ),
-        
         mainPanel(
            fluidRow(plotlyOutput("forecast_plot")),
            fluidRow(
                column(tableOutput("evaluation_metrics") %>% helper(size = "l", content = "helper_evaluation", type = "markdown", buttonLabel = "Close"),
-                      width = 11))
+                      width = 11),
+               column(tabsetPanel(type = "tabs",
+                                  selected = "Observed",
+                                  tabPanel(
+                                      "Forecasts and Intervals", dataTableOutput("forecasts_intervals")),
+                                  tabPanel(
+                                      "Observed", dataTableOutput("observed")
+                                  )
+                                 ),
+                      width = 10))
         )
     )
 )
@@ -186,6 +176,31 @@ server <- function(input, output, session) {
         }  
     })
     
+    tables <- reactive({
+        
+        int_plot <- tibble(
+            time = as_date(time(actual_forecast()$average)),
+            lower = as.numeric(actual_forecast()$lower),
+            upper = as.numeric(actual_forecast()$upper)
+        )
+        
+        points <- tibble(
+            time = as.Date(time(data_ts)),
+            points = as.numeric(data_ts),
+            set = rep("Actual", length(data_ts))
+        ) %>%
+            filter(time >= as.Date(input$time_window), time <= as.Date(time(actual_forecast()$average))[length(time(actual_forecast()$average))]) 
+        
+        combined <- tibble(
+            time = as_date(time(actual_forecast()$average)),
+            points = as.numeric(actual_forecast()$average),
+            set = rep("Forecast", length(actual_forecast()$average))
+        ) %>% 
+            bind_rows(points, .)
+        
+        list(intervals = int_plot, points = points, combined = combined)
+    })
+    
     output$evaluation_metrics <- renderTable({
         
         month_to <- ifelse(month(input$forecast_window) - 1 == 0, 12, month(input$forecast_window) - 1)
@@ -219,7 +234,8 @@ server <- function(input, output, session) {
                 lower = actual_forecast()$lower, 
                 upper = actual_forecast()$upper, 
                 alpha = 1 - input$confidence_level/100,
-                future_obs = ts(forecast_vs_real$data_ts, frequency = 12, start = c(year(input$forecast_window), month(input$forecast_window))))
+                future_obs = ts(forecast_vs_real$data_ts, frequency = 12, start = c(year(input$forecast_window), month(input$forecast_window))),
+                data_ts = data_ts)
          }
         tibble(
             "RMSE of Forecast (in cents)" = rmse_obs,
@@ -228,28 +244,14 @@ server <- function(input, output, session) {
             "MSIS of Prediction Interval" = msis_obs
             )
         }, digits = 5, align = "c")
+    
+    addPopover(session, "evaluation_metrics", title = NULL, content = "Click on the ? icon to the right for more information regarding these evaluation metrics.", trigger = 'hover')
 
     output$forecast_plot <- renderPlotly({
 
-        int_plot <- tibble(
-                time = as_date(time(actual_forecast()$average)),
-                lower = as.numeric(actual_forecast()$lower),
-                upper = as.numeric(actual_forecast()$upper)
-            )
-            
-        points <- tibble(
-            time = as.Date(time(data_ts)),
-            points = as.numeric(data_ts),
-            set = rep("Actual", length(data_ts))
-        ) %>%
-            filter(time >= as.Date(input$time_window), time <= as.Date(time(actual_forecast()$average))[length(time(actual_forecast()$average))]) 
-        
-        combined <- tibble(
-            time = as_date(time(actual_forecast()$average)),
-            points = as.numeric(actual_forecast()$average),
-            set = rep("Forecast", length(actual_forecast()$average))
-        ) %>% 
-            bind_rows(points, .)
+        int_plot <- tables()$intervals
+        points <- tables()$points
+        combined <- tables()$combined
         
         p <- ggplot() + 
             geom_ribbon(data = int_plot, aes(x = time, ymin = lower, ymax = upper), alpha = 0.3) +
@@ -276,6 +278,21 @@ server <- function(input, output, session) {
                     "</sup>")),
                 margin = list(t = 80))
         
+    })
+    
+    output$forecasts_intervals <- renderDataTable({
+        DT::datatable(bind_cols(tables()$intervals %>% rename(Time = time, Upper = upper, Lower = lower), tibble(Mean = actual_forecast()$average)),
+                      extensions = "Buttons", rownames = FALSE, options = list(dom = "Bfrtip", buttons = c("copy", "csv", "excel"))) %>%
+            formatStyle(columns = c("Time", "Upper", "Lower", "Mean"), color = "#00bc8c", backgroundColor = "#222") %>%
+            formatRound(columns = c("Upper", "Lower", "Mean"), digits = 4)
+    })
+    
+    output$observed <- renderDataTable({
+        DT::datatable(tables()$points %>%
+            rename(Time = time, Observed = points) %>%
+            select(-set), extensions = "Buttons", rownames = FALSE, options = list(dom = "Bfrtip", buttons = c("copy", "csv", "excel"))) %>%
+            formatStyle(columns = c("Time", "Observed"), color = "#00bc8c", backgroundColor = "#222") %>%
+            formatRound(columns = c("Observed"), digits = 4)
     })
     
     observe_helpers(withMathJax = TRUE)
