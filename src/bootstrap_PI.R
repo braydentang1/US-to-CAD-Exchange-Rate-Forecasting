@@ -39,8 +39,18 @@ data_FE <- data %>%
 # Get all forecasts
 starting_dates <- seq.Date(from = date("2018-01-01"), to = data$DATE[nrow(data)] %m+% months(1), by = "month")
 
-all_predictions <- pmap(list(starting_dates), .f = ~point_predictions(x = data_ts, xreg = data_FE, to = ..1))
-saveRDS(all_predictions, file = "data/rds/predictions.rds")
+# To generate all predictions from the very start:
+
+# all_predictions <- pmap(list(starting_dates), .f = ~point_predictions(x = data_ts, xreg = data_FE, to = ..1))
+# saveRDS(all_predictions, file = "data/rds/predictions.rds")
+
+# To generate updated predictions
+
+current_predictions <- readRDS("data/rds/predictions.rds")
+current_predictions[[length(current_predictions) + 1]] <- point_predictions(x = data_ts, xreg = data_FE, to = starting_dates[length(starting_dates)])
+saveRDS(current_predictions, "data/rds/predictions.rds")
+
+# To pull in the saved predictions in predictions.rds
 
 # all_predictions <- readRDS("data/rds/predictions.rds")
 # actual_forecast <- all_predictions[[length(all_predictions)]]

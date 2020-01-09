@@ -232,7 +232,7 @@ evaluate_models <- function(data, exclude = "Bagged ETS", time_slices, xreg) {
     error_ensemble[i] <- yardstick::mae_vec(
       truth = as.numeric(test), 
       estimate = as.numeric(model_average_process))
-    
+        
   }
   
   list(

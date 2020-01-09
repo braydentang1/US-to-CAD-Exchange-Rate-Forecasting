@@ -16,7 +16,7 @@ $$\hat y_{it} = \text{the forecasted value from the ith model at time t}, $$
 $$\alpha_{i} = \text{weight given to the ith model and}, $$
 $$M = \text{total number of models}.$$
 
-- The most optimal $\alpha$ are found using random grid search (as an approximation to a Bayesian model combination).
+- The most optimal $\alpha$ are found using random grid search. In the future, I would like to replace this with a true Bayesian model combination.
 
 - Prediction intervals are estimated using bootstrapping as described [here.](https://otexts.com/fpp2/prediction-intervals.html) Note that these intervals assume directly that the forecast errors are uncorrelated.
 

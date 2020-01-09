@@ -12,9 +12,7 @@ library(yardstick)
 
 source("src/all_functions.R")
 
-data <- get_fred_series("EXCAUS", "EXCAUS") %>% 
-    filter(!is.na(EXCAUS)) %>%
-    rename(DATE = date) 
+data <- readRDS("data/rds/excaus.rds")
 
 data_ts <- ts(
     data$EXCAUS,
@@ -53,7 +51,7 @@ ui <- fluidPage(
                 inputId = "forecast_window",
                 label = "Select a forecast period:",
                 choices = seq.Date(from = date("2018-01-01"), to = date(data$DATE[nrow(data)]) %m+% months(1), by = "month"),
-                selected = as.Date("2019-11-01")
+                selected = as.Date(data$DATE[nrow(data)]) %m+% months(1)
             ),
             sliderInput(
                 inputId = "confidence_level",
@@ -75,8 +73,8 @@ ui <- fluidPage(
                 multiple = FALSE,
                 selected = "Ensemble"
             ) %>% helper(size = "l", content = "model_descriptions", type = "markdown", buttonLabel = "Close"),
-            bsTooltip("model", "Click the ? icon for more information on the chosen model.", "right", options = list(container = "body")),
-            withMathJax(helpText(paste("Click the information icon for a description of the app $ \\rightarrow $")) %>% helper(size = "l", icon = "info", content = "description", type = "markdown", buttonLabel = "Close"))
+            bsTooltip("model", "For more information on the chosen model, click on the ? icon.", "right", options = list(container = "body")),
+            helpText("For a description of the app, click the information icon...") %>% helper(size = "l", icon = "info", content = "description", type = "markdown", buttonLabel = "Close")
         ),
         mainPanel(
            fluidRow(plotlyOutput("forecast_plot")),
@@ -245,7 +243,7 @@ server <- function(input, output, session) {
             )
         }, digits = 5, align = "c")
     
-    addPopover(session, "evaluation_metrics", title = NULL, content = "Click on the ? icon to the right for more information regarding these evaluation metrics.", trigger = 'hover')
+    addPopover(session, "evaluation_metrics", title = NULL, content = "For more information regarding these evaluation metrics, click on the ? icon to the right.", trigger = 'hover')
 
     output$forecast_plot <- renderPlotly({
 
