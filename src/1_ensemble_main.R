@@ -66,5 +66,7 @@ data_FE <- xreg_feat_eng(data)
 }
 
 main(
-  iterations = opt$iterations
+  iterations = opt$iterations,
+  results_out = opt$results_out,
+  excaus_in = opt$excaus_in
 )

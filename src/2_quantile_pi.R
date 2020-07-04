@@ -76,5 +76,6 @@ main <- function(excaus_in, results_out) {
 }
 
 main(
-  opt$output_path
+  excaus_in = opt$excaus_in,
+  results_out = opt$output_path
 )
