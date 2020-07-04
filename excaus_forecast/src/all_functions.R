@@ -167,6 +167,11 @@ grab_predictions <- function(train, horizon, xreg_train, xreg_newdata) {
   forecast_tbats <- forecast(model_tbats, h = horizon)
   model_average[[2]] <- forecast_tbats$mean
   
+  if (all(xreg_train[, "covid"] == 0)) {
+    xreg_train <- xreg_train[, !colnames(xreg_train) %in% c("covid")]
+    xreg_newdata <- xreg_newdata[, !colnames(xreg_newdata) %in% c("covid")]
+  }
+  
   arima_model <- auto.arima(
     y = train, 
     ic = "aicc",
@@ -303,6 +308,10 @@ point_predictions <- function(x, iterations = 60, xreg, to = NULL) {
     twothousandtwo_levelchange = c(0, 0, 0)
   )
   
+  if (to >= "2020-03-01") {
+    xreg_newdata$covid = c(1, 1, 1)
+  } 
+  
   ts(forecast_ensemble(
     train = x,
     horizon = 3,
@@ -313,29 +322,6 @@ point_predictions <- function(x, iterations = 60, xreg, to = NULL) {
       if_else(months_end + 1 == 13, years_end + 1, years_end), 
       if_else(months_end + 1 == 13, 1, months_end + 1)), 
     frequency = 12)
-  
-}
-
-simulated_residuals <- function(x, forecast_latest, xreg, data_ts) {
-  
-  #' This function simulates residuals to use for creating prediction intervals.
-  #'
-  #' @param x The simulated time series, created through bootstrapping
-  #' @param forecast_latest The time series forecasts of y over the period of simulation
-  #' @param xreg The exogenous regressors for the ARIMAX model. Must be a matrix.
-  #' @param data The entire, full time series.
-  #'
-  #' @return A ts object that calculates residuals based off a simulated time series x.
-  #' @export
-  #'
-  
-  y <- point_predictions(x = x, iterations = 60, xreg = xreg)
-  
-  ts.intersect(data_ts, y, dframe = TRUE) %>%
-    transmute(residual = data_ts - weighted_average) %>%
-    mutate(horizon = c("time1", "time2", "time3")) %>%
-    tidyr::spread(key = horizon, value = residual) %>%
-    as_tibble(., .name_repair = "unique")
   
 }
 
@@ -373,3 +359,72 @@ msis <- function(lower, upper, alpha, future_obs, m = 1, data_ts) {
   
 }
 
+#' This function generates the xreg matrix for the ARIMAX model
+#'
+#' @param data A tibble containing two columns: DATE, which has the date is 
+#' the format yyyy-mm-dd, and EXCAUS, which has the average exchange rate for the given month.
+#'
+#' @return Data.matrix object of features for the xreg argument in auto.arima
+#' @export 
+#'
+#' @examples
+#' xreg_feat_eng(tibble(DATE = c("1991-01-01", "1991-02-01"), EXCAUS = c(1.31, 1.32)))
+xreg_feat_eng <- function(data) {
+
+  data %>% 
+    mutate(great_recession_ind = if_else(DATE >= ymd("2007-12-01") & DATE <= ymd("2009-06-01"), 1, 0)) %>%
+    mutate(dotcom_bubble = if_else(DATE >= ymd("2001-03-01") & DATE <= ymd("2001-11-01"), 1,0)) %>%
+    mutate(twothousandten_levelchange = if_else(year(DATE) >= 2008, 1,0)) %>%
+    mutate(holidays = if_else(month(DATE) == 11 | month(DATE) == 12, 1,0)) %>%
+    mutate(twothousandtwo_levelchange = if_else(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1,0)) %>%
+    mutate(covid = if_else(DATE >= "2020-03-01", 1, 0)) %>%
+    filter(DATE >= ymd("2000-1-01")) %>%
+    select(-EXCAUS, -DATE) %>%
+    data.matrix(.)
+
+}
+
+#' Calculates prediction intervals using Taylor and Bunn (1999), using an adjusted regression
+#' function as explained by Ivan Svetunkov (2017).
+#'
+#' @param forecast_date Starting date (inclusive) for which to provide three month ahead forecasts
+#' @param predictions_combined A tibble containing all of the predictions. Must have
+#' columns pred, observed, error, x (the predictors), and starting_dates (the forecast date, inclusive, for which
+#' to provide three month ahead forecasts)
+#' @param quantile The desired prediction interval level (ex: 0.95)
+#'
+#' @return A tibble with the desired lower and upper bounds on the forecast error
+#' term.
+#' @export
+#'
+#' @examples
+#' get_intervals("2019-01-01", my_data, 0.95)
+get_intervals <- function(forecast_date, predictions_combined, quantile) {
+  
+  error_data <- predictions_combined %>%
+    filter(starting_dates < forecast_date)
+  
+  A <- c(1,1)
+  quant <- (1 + quantile) / 2
+  
+  # https://github.com/trnnick/smooth/blob/master/R/ssfunctions.R
+  quantfunc <- function(A, quant, data) {
+    
+    ee <- data$error - (A[1] * data$x^A[2])
+    (1 - quant) * sum(abs(ee[which(ee<0)])) + quant*sum(abs(ee[which(ee>=0)]))
+    
+  }
+  
+  upper <- nlminb(A, quantfunc, quant = quant, data = error_data)$par
+  lower <- nlminb(A, quantfunc, quant = 1 - quant, data = error_data)$par  
+  
+  upper_residuals <- upper[1] * c(1:3)^upper[2]
+  lower_residuals <- lower[1] * c(1:3)^lower[2]
+  
+  tibble(
+    lower = lower_residuals,
+    upper = upper_residuals,
+    period = c(ymd(forecast_date), ymd(forecast_date) %m+% months(1), ymd(forecast_date) %m+% months(2))
+  )
+  
+}

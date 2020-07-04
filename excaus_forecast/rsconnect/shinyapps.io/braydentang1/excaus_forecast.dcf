@@ -5,6 +5,6 @@ account: braydentang1
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1625713
-bundleId: 2717844
+bundleId: 3098854
 url: https://braydentang1.shinyapps.io/excaus_forecast/
-when: 1578601681.50226
+when: 1588551562.11581

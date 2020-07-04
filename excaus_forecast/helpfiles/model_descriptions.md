@@ -18,7 +18,7 @@ $$M = \text{total number of models}.$$
 
 - The most optimal $\alpha$ are found using random grid search. In the future, I would like to replace this with a true Bayesian model combination.
 
-- Prediction intervals are estimated using bootstrapping as described [here.](https://otexts.com/fpp2/prediction-intervals.html) Note that these intervals assume directly that the forecast errors are uncorrelated.
+- Prediction intervals are found using quantile regression as proposed by Taylor and Bunn (1999) with modifications as proposed by Svetunkov (2017). 
 
 #### Random Walk with Drift:
 

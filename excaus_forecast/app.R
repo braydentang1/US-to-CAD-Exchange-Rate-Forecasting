@@ -12,7 +12,7 @@ library(yardstick)
 
 source("src/all_functions.R")
 
-data <- readRDS("data/rds/excaus.rds")
+data <- readRDS("results/excaus.rds")
 
 data_ts <- ts(
     data$EXCAUS,
@@ -21,18 +21,9 @@ data_ts <- ts(
     end = c(year(data$DATE[nrow(data)]), month(data$DATE[nrow(data)]))) %>%
     window(., start = c(2000, 1))
 
-data_FE <- data %>% 
-    mutate(great_recession_ind = if_else(DATE >= ymd("2007-12-01") & DATE <= ymd("2009-06-01"), 1, 0)) %>%
-    mutate(dotcom_bubble = if_else(DATE >= ymd("2001-03-01") & DATE <= ymd("2001-11-01"), 1, 0)) %>%
-    mutate(twothousandten_levelchange = if_else(year(DATE) >= 2008, 1, 0)) %>%
-    mutate(holidays = if_else(month(DATE) == 11 | month(DATE) == 12, 1, 0)) %>%
-    mutate(twothousandtwo_levelchange = if_else(year(DATE) >= 2002.2 & year(DATE) <= 2007.5, 1, 0)) %>%
-    filter(DATE >= ymd("2000-1-01")) %>%
-    select(-EXCAUS, -DATE) %>%
-    data.matrix(.) 
-
-residuals_sim_df <- bind_rows(readRDS("data/rds/residuals_sim.rds"))
-all_predictions <- readRDS("data/rds/predictions.rds")
+data_FE <- xreg_feat_eng(data)
+all_predictions <- readRDS("results/predictions.rds")
+all_residuals <- readRDS("results/quantile-training-data.rds")
 
 ui <- fluidPage(
 
@@ -109,14 +100,14 @@ server <- function(input, output, session) {
         
         if (input$model == "Ensemble") {
             
-            mean_forecast <- all_predictions[[which(seq.Date(from = date("2018-01-01"), to = date(data$DATE[nrow(data)]) %m+% months(1), by = "month") == input$forecast_window)]]
+            mean_forecast <- all_predictions[[which(seq.Date(from = date("2009-01-01"), to = date(data$DATE[nrow(data)]) %m+% months(1), by = "month") == input$forecast_window)]]
             
-            lower <-  map(residuals_sim_df, ~quantile(., 0.5 - input$confidence_level / 200)) %>% 
-                unlist(.) %>%
+            prediction_intervals <- get_intervals(forecast_date = input$forecast_window, predictions_combined = all_residuals, quantile = input$confidence_level / 100)
+            
+            lower <- prediction_intervals$lower %>%
                 ts(., start = c(year(zoo::as.Date(mean_forecast))[1], month(zoo::as.Date(mean_forecast))[1]), frequency = 12) + mean_forecast
             
-            upper <- map(residuals_sim_df, ~quantile(., input$confidence_level / 200 + 0.5)) %>% 
-                unlist(.) %>%
+            upper <- prediction_intervals$upper %>%
                 ts(., start = c(year(zoo::as.Date(mean_forecast))[1], month(zoo::as.Date(mean_forecast))[1]), frequency = 12) + mean_forecast
             
             list(average = mean_forecast, lower = lower, upper = upper)
@@ -154,11 +145,21 @@ server <- function(input, output, session) {
                 dotcom_bubble = c(0, 0, 0), 
                 twothousandten_levelchange = c(1, 1, 1),
                 holidays = if_else(months_forecast == 11 | months_forecast == 12, 1, 0), 
-                twothousandtwo_levelchange = c(0, 0, 0)
+                twothousandtwo_levelchange = c(0, 0, 0),
+                covid = c(0, 0, 0)
             ) %>%
                 data.matrix(.)
             
-            model <- auto.arima(y = train_ts, xreg = data_FE[1:length(train_ts), ])
+            xreg_temp <- data_FE[1:length(train_ts), ]
+            
+            if (all(xreg_temp[, "covid"] == 0)) {
+                xreg_temp <- xreg_temp[, !colnames(xreg_temp) %in% "covid"]
+                xreg_newdata <- xreg_newdata[, !colnames(xreg_newdata) %in% "covid"]
+            } else {
+                xreg_newdata[, "covid"] <- c(1, 1, 1) 
+            }
+            
+            model <- auto.arima(y = train_ts, xreg = xreg_temp)
             forecasts_ARIMAX <- forecast(model, h = 3, xreg = xreg_newdata, level = input$confidence_level)
             
             list(average = forecasts_ARIMAX$mean, lower = forecasts_ARIMAX$lower[, 1], upper = forecasts_ARIMAX$upper[, 1])
