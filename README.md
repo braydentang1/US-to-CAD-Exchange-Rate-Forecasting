@@ -22,23 +22,29 @@ To recreate this repository from scratch (and to host the Shiny app on shinyapps
 1) Clone this repository.
 2) In the root directory of this repository, run:
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus make -C excaus_forecast/results/ensemble_validation.csv```
+```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus excaus_forecast/results/ensemble_validation.csv```
 
 3) After the above is finished, run (again in the root directory of this repository):
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus make -C excaus_forecast/results/quantile-training-data.rds```
+```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus excaus_forecast/results/quantile-training-data.rds```
 
 Steps 2) and 3) might take about one hour to run.
 
-4) Run from the root directory of this repository:
+4) Run, from the root directory of this repository:
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app Rscript -e Rscript -e "shiny::runApp('excaus_forecast')"```
+```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app Rscript -e "shiny::runApp('excaus_forecast')"```
+
+Then visit the address printed in the terminal using any web browser. 
 
 To reset the repository without any intermediate results, run:
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus make -C clean```
+```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus clean```
 
 Note that the Makefile "all" command triggers a command to upload to shinyapps.io through rsconnect. If you wish to do this, make sure to [configure your R](https://shiny.rstudio.com/articles/shinyapps.html) so that uploading is possible. 
+
+Window users: you may need to replace:
+
+```"/$(pwd):/excaus"``` with ```${pwd}://excaus```.
 
 ## Dependencies:
 
