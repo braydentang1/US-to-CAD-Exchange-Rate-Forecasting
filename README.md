@@ -1,6 +1,6 @@
 # US-to-CAD-Exchange-Rate-Forecasting
 
-## Introduction
+## Introduction:
 
 An attempt to forecast the US to CAD Exchange Rate- Inspired by a school project
 
