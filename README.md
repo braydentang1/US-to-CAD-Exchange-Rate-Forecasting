@@ -44,7 +44,7 @@ Note that the Makefile "all" command triggers a command to upload to shinyapps.i
 
 Window users: you may need to replace:
 
-```"/$(pwd):/excaus"``` with ```${pwd}://excaus```.
+```"/$(pwd):/excaus"``` with ```${pwd}://excaus```
 
 ## Dependencies:
 
