@@ -1,4 +1,4 @@
-all: excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds
+all: excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds upload
 
 # Validate individual methods
 
@@ -17,8 +17,9 @@ excaus_forecast/results/quantile-training-data.rds: src/2_quantile_pi.R src/all_
 
 # Build the app and upload
 
-.PHONY: excaus_forecast/app.R excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds
-	Rscript rsconnect::deployApp("excaus_forecast", forceUpdate = TRUE, launch.browser = FALSE)
+.PHONY: upload
+upload: excaus_forecast/app.R excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds
+	Rscript -e "rsconnect::deployApp('excaus_forecast', forceUpdate = TRUE, launch.browser = FALSE)"
 
 clean:
 	rm -rf excaus_forecast/results/*

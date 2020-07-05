@@ -60,7 +60,7 @@ main <- function(excaus_in, results_out) {
   all_predictions <- map(starting_dates, .f = function(a) point_predictions(x = data_ts, xreg = data_FE, to = a)) %>%
     set_names(starting_dates)
   
-  saveRDS(all_predictions, file = paste0(output_path, "/predictions.rds"))
+  saveRDS(all_predictions, file = paste0(results_out, "/predictions.rds"))
   
   predictions_combined <- tibble(
    pred = reduce(all_predictions[1:(length(all_predictions) - 3)], .f = function(x, y) c(x, y)),
@@ -77,5 +77,5 @@ main <- function(excaus_in, results_out) {
 
 main(
   excaus_in = opt$excaus_in,
-  results_out = opt$output_path
+  results_out = opt$results_out
 )
