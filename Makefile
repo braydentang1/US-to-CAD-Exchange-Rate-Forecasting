@@ -12,7 +12,7 @@ excaus_forecast/results/ensemble_validation.csv: src/1_ensemble_main.R src/all_f
 	
 # Get training data for quantile regression predictino intervals
 
-excaus_forecast/results/quantile-training-data.rds: src/2_quantile_pi.R src/all_functions.R excaus_forecast/results/excaus.rds
+excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/predictions.rds: src/2_quantile_pi.R src/all_functions.R excaus_forecast/results/excaus.rds
 	Rscript src/2_quantile_pi.R --excaus_in excaus_forecast/results/excaus.rds --results_out excaus_forecast/results 
 
 # Build the app and upload
