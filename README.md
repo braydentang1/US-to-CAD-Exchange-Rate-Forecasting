@@ -17,7 +17,7 @@ This project is inspired by what my friend (Riley Peters) and I did in our term 
 
 Requires Docker. You may need sudo privileges in order to run the following docker commands.
 
-To recreate this repository from scratch (and to host the Shiny app on shinyapps.io):
+To recreate this repository from scratch (and to run the Shiny app locally):
 
 1) Clone this repository.
 2) In the root directory of this repository, run:
@@ -42,7 +42,7 @@ To reset the repository without any intermediate results, run:
 
 Note that the Makefile "all" command triggers a command to upload to shinyapps.io through rsconnect. If you wish to do this, make sure to [configure your R](https://shiny.rstudio.com/articles/shinyapps.html) so that uploading is possible. 
 
-Window users: you may need to replace:
+Windows users: you may need to replace:
 
 ```"/$(pwd):/excaus"``` with ```${pwd}://excaus```
 
