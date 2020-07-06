@@ -40,11 +40,9 @@ To reset the repository without any intermediate results, run:
 
 ```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus clean```
 
-Note that the Makefile "all" command triggers a command to upload to shinyapps.io through rsconnect. If you wish to do this, make sure to [configure your R](https://shiny.rstudio.com/articles/shinyapps.html) so that uploading is possible. 
+Windows users, you may need to replace:
 
-Windows users: you may need to replace:
-
-```"/$(pwd):/excaus"``` with ```${pwd}://excaus```
+```"/$(pwd):/excaus"``` with ```"${pwd}://excaus"```
 
 ## Dependencies:
 
