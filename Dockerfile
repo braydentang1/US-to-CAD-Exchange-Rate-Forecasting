@@ -15,4 +15,8 @@ RUN apt-get install libudunits2-dev -y
 RUN apt install libgdal-dev -y 
 
 RUN Rscript -e "install.packages(c('caret', 'forecast', 'zoo', 'smooth', 'lubridate', 'alfred',\
-'shiny', 'shinyWidgets', 'plotly', 'shinythemes', 'shinyhelper', 'shinyBS', 'DT', 'yardstick'))"
+'shiny', 'shinyWidgets', 'plotly', 'shinythemes', 'shinyhelper', 'shinyBS', 'DT', 'yardstick', 'rsconnect'))"
+
+COPY credentials.R
+
+ENTRYPOINT ["Rscript", "credentials.R"]
