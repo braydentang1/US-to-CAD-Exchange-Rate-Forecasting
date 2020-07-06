@@ -17,6 +17,6 @@ RUN apt install libgdal-dev -y
 RUN Rscript -e "install.packages(c('caret', 'forecast', 'zoo', 'smooth', 'lubridate', 'alfred',\
 'shiny', 'shinyWidgets', 'plotly', 'shinythemes', 'shinyhelper', 'shinyBS', 'DT', 'yardstick', 'rsconnect'))"
 
-COPY credentials.R .
+COPY credentials.R .	
 
-ENTRYPOINT	 ["Rscript", "credentials.R"]
+ENTRYPOINT ["Rscript", "credentials.R"]
