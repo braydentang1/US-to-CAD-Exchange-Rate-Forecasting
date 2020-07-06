@@ -22,15 +22,11 @@ To recreate this repository from scratch (and to run the Shiny app locally):
 1) Clone this repository.
 2) In the root directory of this repository, run:
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus excaus_forecast/results/ensemble_validation.csv```
+```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus all```
 
-3) After the above is finished, run (again in the root directory of this repository):
+This might take about one hour to run. 
 
-```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app make -C /excaus excaus_forecast/results/quantile-training-data.rds```
-
-Steps 2) and 3) might take about one hour to run.
-
-4) Run, from the root directory of this repository:
+3) Run, from the root directory of this repository:
 
 ```docker run --rm -v "/$(pwd):/excaus" btang101/excaus_app Rscript -e "shiny::runApp('excaus_forecast')"```
 

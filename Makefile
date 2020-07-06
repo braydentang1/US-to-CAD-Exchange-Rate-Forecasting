@@ -1,4 +1,4 @@
-all: excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds upload
+all: excaus_forecast/results/quantile-training-data.rds excaus_forecast/results/excaus.rds excaus_forecast/results/predictions.rds
 
 # Validate individual methods
 
