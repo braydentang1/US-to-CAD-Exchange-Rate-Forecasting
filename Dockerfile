@@ -19,4 +19,4 @@ RUN Rscript -e "install.packages(c('caret', 'forecast', 'zoo', 'smooth', 'lubrid
 
 COPY credentials.R
 
-CMD ["Rscript", "credentials.R"]
+ENTRYPOINT ["Rscript", "credentials.R"]
