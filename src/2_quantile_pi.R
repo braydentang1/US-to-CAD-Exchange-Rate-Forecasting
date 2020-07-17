@@ -33,7 +33,7 @@ opt <- docopt(doc)
 #' @export
 #'
 #' @examples
-#' main("results")
+#' main("data/excaus.rds", "results")
 main <- function(excaus_in, results_out) {
 
   # Import data

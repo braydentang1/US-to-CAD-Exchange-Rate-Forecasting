@@ -88,9 +88,15 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
     observeEvent(input$time_window, {
-        if (input$time_window > input$forecast_window) {
-            updateSliderTextInput(session, inputId = "time_window", selected = input$forecast_window)
+        
+        if (as.Date(input$time_window) < "2018-01-01") {
+            from_date <- "2018-01-01"
+        } else {
+            from_date <- input$time_window
         }
+        
+        updateSliderTextInput(session, inputId = "forecast_window", choices = seq.Date(from = as.Date(from_date), to = date(data$DATE[nrow(data)]) %m+% months(1), by = "month"),
+                              selected = input$forecast_window)
     })
     
     actual_forecast <- reactive({
@@ -118,7 +124,7 @@ server <- function(input, output, session) {
                 y = window(data_ts, end = c(year_to, month_to)),
                 h = 3, 
                 drift = TRUE,
-                level = input$confidence_level
+                level = input$confidence_level 
                 )
             
             list(average = model$mean, lower = model$lower[, 1], upper = model$upper[, 1])
@@ -178,20 +184,20 @@ server <- function(input, output, session) {
     tables <- reactive({
         
         int_plot <- tibble(
-            time = as_date(time(actual_forecast()$average)),
+            time = zoo::as.Date(time(actual_forecast()$average)),
             lower = as.numeric(actual_forecast()$lower),
             upper = as.numeric(actual_forecast()$upper)
         )
         
         points <- tibble(
-            time = as.Date(time(data_ts)),
+            time = zoo::as.Date(time(data_ts)),
             points = as.numeric(data_ts),
             set = rep("Actual", length(data_ts))
         ) %>%
             filter(time >= as.Date(input$time_window), time <= as.Date(time(actual_forecast()$average))[length(time(actual_forecast()$average))]) 
         
         combined <- tibble(
-            time = as_date(time(actual_forecast()$average)),
+            time = zoo::as.Date(time(actual_forecast()$average)),
             points = as.numeric(actual_forecast()$average),
             set = rep("Forecast", length(actual_forecast()$average))
         ) %>% 
