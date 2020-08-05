@@ -6,7 +6,7 @@ An attempt to forecast the US to CAD Exchange Rate.
 
 One can view a Shiny app [here,](https://braydentang1.shinyapps.io/excaus_forecast/) that summarizes the results of this repository.
 
-This project is inspired by what my friend (Riley Peters) and I did in our term project at the University of Regina, however, with a much greater emphasis on:
+This project is inspired by what my friend (Riley Peters) and I did in our term project at the University of Regina with a much greater emphasis on:
 
 1) Forecasting and forecasting performance over general time series analysis,
 2) Utilizing cross validation in a time series context in which models are dynamically refit per each slice of time.
