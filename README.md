@@ -8,7 +8,7 @@ One can view a Shiny app [here,](https://braydentang1.shinyapps.io/excaus_foreca
 
 This project is inspired by what my friend (Riley Peters) and I did in our term project at the University of Regina with a much greater emphasis on:
 
-1) Forecasting and forecasting performance over general time series analysis,
+1) Forecasting and forecasting performance over general time series analysis.
 2) Utilizing cross validation in a time series context in which models are dynamically refit per each slice of time.
 3) Larger emphasis on accurate prediction intervals, including using methods proposed by [Taylor and Bunn (1999)](https://www.jstor.org/stable/2634872?seq=1) and [Svetunkov (2017)](https://forecasting.svetunkov.ru/en/2017/06/11/smooth-package-for-r-prediction-intervals/).
 4) Shorter term forecasts; the term project we did prioritized 12 month ahead forecasts which were unlikely to be accurate given how long the time frame is.
