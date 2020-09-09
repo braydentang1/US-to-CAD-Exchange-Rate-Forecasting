@@ -8,4 +8,6 @@ View on [GitHub.](https://github.com/braydentang1/US-to-CAD-Exchange-Rate-Foreca
 
 Data taken from the [Federal Reserve Bank of St. Louis.](https://fred.stlouisfed.org/)
 
+This app updates automatically on the 15th of every month.
+
 Created by Brayden Tang (2020).

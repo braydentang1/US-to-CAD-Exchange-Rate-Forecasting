@@ -2,7 +2,8 @@
 
 #### RMSE (Root Mean Squared Error)
 
-- The average squared difference between the actual observed value of the exchange rate and the forecasted rate given by the model selected. The square root of this average is taken to return the error on the original units of the axis. Mathematically,
+- The average squared difference between the actual observed value of the exchange rate and the forecasted rate given by the model selected. The square root of this average is taken to return the error on the original units.
+Mathematically,
 
 $$\sqrt{\frac{1}{h}\sum_{t = 1}^{h} (y_{t} - \hat y_{t})^2}, $$
 

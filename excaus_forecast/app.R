@@ -26,10 +26,11 @@ all_predictions <- readRDS("results/predictions.rds")
 all_residuals <- readRDS("results/quantile-training-data.rds")
 
 ui <- fluidPage(
-
+    
     # Application title
     titlePanel("Forecasting the US to Canadian Exchange Rate"),
     theme = shinytheme("darkly"),
+    includeCSS("style.css"),
     sidebarLayout(
         sidebarPanel(
             sliderTextInput(
@@ -72,6 +73,10 @@ ui <- fluidPage(
            fluidRow(
                column(tableOutput("evaluation_metrics") %>% helper(size = "l", content = "helper_evaluation", type = "markdown", buttonLabel = "Close"),
                       width = 11),
+               tags$style(HTML(
+               ".dataTables_wrapper .dataTables_paginate .paginate_button {
+                    color: #ffffff !important
+               }")),
                column(tabsetPanel(type = "tabs",
                                   selected = "Observed",
                                   tabPanel(
@@ -294,8 +299,12 @@ server <- function(input, output, session) {
     
     output$observed <- renderDataTable({
         DT::datatable(tables()$points %>%
-            rename(Time = time, Observed = points) %>%
-            select(-set), extensions = "Buttons", rownames = FALSE, options = list(dom = "Bfrtip", buttons = c("copy", "csv", "excel"))) %>%
+                rename(Time = time, Observed = points) %>%
+                select(-set),
+            extensions = "Buttons",
+            rownames = FALSE,
+            options = list(dom = "Bfrtip", buttons = c("copy", "csv", "excel"))
+            ) %>%
             formatStyle(columns = c("Time", "Observed"), color = "#00bc8c", backgroundColor = "#222") %>%
             formatRound(columns = c("Observed"), digits = 4)
     })

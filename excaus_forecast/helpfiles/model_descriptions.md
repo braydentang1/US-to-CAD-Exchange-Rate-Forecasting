@@ -35,12 +35,12 @@ $$W_{t} \ \text{follows a white noise process.}$$
 
 #### Complex Exponential Smoothing (CES)
 
-- A proposed improvement over exponential smoothing models that decompose a series into errors, trend, and seasonality.
+- A proposed improvement over exponential smoothing models.
 - Overall idea is to circumvent the need to decompose a series and instead use the "information potential" of a series $p_{t}$ and its observed values $y_{t}$. 
 - Modelling for both of these components is done simultaneously using a complex variable.
 - Please see [this paper by Svetunkov et. al](https://mpra.ub.uni-muenchen.de/69394/1/MPRA_paper_69394.pdf) for a technical description of this method.
-- Prediction intervals given are estimated using a non-parametric method via quantile regression.
-- Parameters chosen based off AICc.
+- Prediction intervals given are estimated using the same quantile regression method as the ensemble.
+- Parameters chosen using AICc.
 
 #### ARIMAX
 
@@ -58,5 +58,5 @@ $$y_t = \beta x_t + \phi_1 y_{t-1} + \cdots + \phi_p y_{t-p} - \theta_1 z_{t-1} 
 
 - A highly flexible framework for forecasting time series. Incorporates Box-Cox transformations, seasonality with Fourier terms (though this is ignored in this case since there is no seasonality) and ARMA errors; all automatically. Each of these parameters are chosen using AICc.
 
-- Prediction intervals given are the theoretical ones based off a Gaussian assumption.
+- Prediction intervals given are the theoretical ones based on a Gaussian assumption.
 

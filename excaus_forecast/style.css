@@ -1,0 +1,27 @@
+.dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, .dataTables_wrapper .dataTables_paginate {
+  color: #ffffff !important;
+}
+
+div.datatables {
+  color: #ffffff !important;
+}
+
+.irs-bar, .irs-bar-edge {
+  border-top: rgb(0, 188, 140);
+  border-bottom: rgb(0, 188, 140);
+  background: rgb(0, 188, 140);
+}
+
+.irs-min, .irs-max {
+  color: #ffffff;
+  background: #446960;
+}
+
+.irs-single {
+  color: #ffffff;
+  background: #206b58;
+}
+
+.shinyhelper-container {
+  color: rgb(0, 188, 140) !important;
+}
